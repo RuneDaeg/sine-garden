@@ -1,0 +1,2136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sine Garden</title>
+<meta name="description" content="사인파를 쌓아 소리를 만들며 푸리에 합성을 배우는 웹 신시사이저. 엔벨로프, EQ, 푸리에 실험실, 소리 맞히기 미션.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233245CF'/%3E%3Cpath d='M4 16c3-9 6-9 8 0s5 9 8 0 5-9 8 0' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Michroma&display=swap">
+<style>
+/* Layout: a synth front panel. Generators + live preview on top, envelopes + EQ below, keyboard as the bottom rail.
+   Dark inset "screens" sit in an anodized panel in both themes. */
+:root{
+  --bg:#E3E6EC;
+  --panel:#F4F5F8;
+  --well:#DCE0E8;
+  --line:#C8CED9;
+  --ink:#151820;
+  --muted:#596273;
+  --accent:#3245CF;
+  --accent-ink:#FFFFFF;
+  --screen:#11151C;
+  --screen-line:rgba(226,232,245,.07);
+  --screen-line-2:rgba(226,232,245,.17);
+  --screen-ink:#E8ECF4;
+  --screen-dim:#7C8597;
+  --trace:#F3F5F9;
+  --env-a:#7DB3FF;
+  --env-b:#FFB25E;
+  --env-ink:#0F1218;
+  --danger:#D93D42;
+  --good:#18804A;
+  --good-ink:#FFFFFF;
+  --swatch-l:48%;
+  --swatch-ink:#FFFFFF;
+  --key-white:#FCFCFD;
+  --key-black:#1A1D24;
+  --key-black-ink:#8C93A3;
+  --key-gap:#B7BDC9;
+  --f-display:"Michroma","Eurostile","Microgramma",ui-sans-serif,sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111318; --panel:#191C23; --well:#262A35; --line:#2E333F; --ink:#E6E8EE; --muted:#959CAB;
+    --accent:#8F9DFF; --accent-ink:#0D1022;
+    --screen:#090B0F; --screen-line:rgba(226,232,245,.06); --screen-line-2:rgba(226,232,245,.15);
+    --screen-ink:#E8ECF4; --screen-dim:#788092; --trace:#F3F5F9;
+    --env-a:#7DB3FF; --env-b:#FFB25E; --env-ink:#0F1218; --danger:#FF6369;
+    --good:#4CC98A; --good-ink:#0C1A12;
+    --swatch-l:66%; --swatch-ink:#111318;
+    --key-white:#D5D9E1; --key-black:#0C0E12; --key-black-ink:#6E7586; --key-gap:#2A2F3A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111318; --panel:#191C23; --well:#262A35; --line:#2E333F; --ink:#E6E8EE; --muted:#959CAB;
+  --accent:#8F9DFF; --accent-ink:#0D1022;
+  --screen:#090B0F; --screen-line:rgba(226,232,245,.06); --screen-line-2:rgba(226,232,245,.15);
+  --screen-ink:#E8ECF4; --screen-dim:#788092; --trace:#F3F5F9;
+  --env-a:#7DB3FF; --env-b:#FFB25E; --env-ink:#0F1218; --danger:#FF6369;
+  --good:#4CC98A; --good-ink:#0C1A12;
+  --swatch-l:66%; --swatch-ink:#111318;
+  --key-white:#D5D9E1; --key-black:#0C0E12; --key-black-ink:#6E7586; --key-gap:#2A2F3A;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--f-body); font-size:14px; line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:18px 36px;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+output,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink)}
+kbd{font:500 11px var(--f-mono);border:1px solid var(--line);background:var(--well);border-radius:4px;padding:0 4px}
+
+.app{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+
+/* header */
+.top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px;padding-bottom:2px}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:22px;letter-spacing:.08em;margin:0;line-height:1.15;text-transform:uppercase;text-wrap:balance}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.topctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.field{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.field > span{white-space:nowrap}
+.field select{min-width:150px}
+.field.vol input{width:110px}
+.field.vol output{min-width:56px}
+.meter{position:relative;width:84px;height:8px;border-radius:4px;background:var(--well);overflow:hidden;border:1px solid var(--line)}
+.meter i{position:absolute;inset:0;transform-origin:left center;transform:scaleX(0);background:var(--accent)}
+.meter b{position:absolute;top:0;bottom:0;width:2px;left:-2px;background:var(--ink)}
+.meter.clip i{background:var(--danger)}
+.pill{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill.on{color:var(--ink);border-color:var(--accent)}
+
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.p-gen{grid-column:span 7}.p-prev{grid-column:span 5}.p-env{grid-column:span 5}.p-eq{grid-column:span 7}.p-keys,.flow{grid-column:1/-1}
+@media (max-width:1239px){.p-gen,.p-eq{grid-column:1/-1}.p-prev,.p-env{grid-column:span 6}}
+@media (max-width:760px){.p-prev,.p-env{grid-column:1/-1}}
+.ph{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.ph h2{margin:0;font-family:var(--f-display);font-weight:400;font-size:11px;letter-spacing:.16em;text-transform:uppercase;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.ph h2 span{font-family:var(--f-body);font-size:13px;letter-spacing:0;text-transform:none;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hint{color:var(--muted);font-size:12px;margin:0}
+canvas.screen{display:block;width:100%;max-width:100%;background:var(--screen);border-radius:8px}
+
+/* controls */
+.btn{font:500 13px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default;border-color:var(--line)}
+select{font:500 13px var(--f-body);color:var(--ink);background:var(--well);border:1px solid var(--line);border-radius:7px;padding:6px 8px;width:100%}
+.mini{width:24px;height:28px;flex:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer;font:500 14px var(--f-mono);line-height:1;padding:0}
+.mini:hover{border-color:var(--accent)}
+
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;min-width:0;height:20px;margin:0;background:transparent;cursor:pointer;--lo:0%;--hi:50%}
+input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--well) 0 var(--lo),var(--accent) var(--lo) var(--hi),var(--well) var(--hi) 100%)}
+input[type="range"]::-moz-range-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--well) 0 var(--lo),var(--accent) var(--lo) var(--hi),var(--well) var(--hi) 100%)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:var(--panel);border:2px solid var(--accent)}
+input[type="range"]::-moz-range-thumb{width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--accent)}
+input[type="range"]:disabled{opacity:.35;cursor:not-allowed}
+
+.knob{display:flex;flex-direction:column;gap:3px;min-width:0}
+.kt{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--muted)}
+
+/* generators */
+.ghead,.grow{display:grid;grid-template-columns:28px 104px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 60px 24px;gap:8px;align-items:center}
+.ghead{font-size:11px;color:var(--muted);padding:0 2px}
+.glist{display:flex;flex-direction:column;gap:2px}
+.grow{padding:4px 2px;--accent:hsl(var(--h) 66% var(--swatch-l))}
+.grow.off .cell,.grow.off .ratio{opacity:.4}
+.sw{width:28px;height:28px;border-radius:50%;border:2px solid hsl(var(--h) 66% var(--swatch-l));background:hsl(var(--h) 66% var(--swatch-l));color:var(--swatch-ink);font:600 12px var(--f-mono);cursor:pointer;display:grid;place-items:center;padding:0}
+.sw[aria-pressed="false"]{background:transparent;color:var(--muted)}
+.ratio{display:flex;align-items:center;gap:2px;min-width:0}
+.ratio input{flex:1;width:100%;min-width:0;height:28px;border:1px solid var(--line);background:var(--well);border-radius:6px;font:500 13px var(--f-mono);text-align:center;padding:0 2px;-moz-appearance:textfield;appearance:textfield}
+.ratio input::-webkit-inner-spin-button,.ratio input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.cell{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:6px;min-width:0}
+.cell .cl{display:none}
+.cell output{text-align:right;font-size:11.5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--well)}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 12px var(--f-mono);padding:5px 0;width:29px;cursor:pointer}
+.seg button[data-env="A"][aria-pressed="true"]{background:var(--env-a);color:var(--env-ink)}
+.seg button[data-env="B"][aria-pressed="true"]{background:var(--env-b);color:var(--env-ink)}
+.del{width:24px;height:26px;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-size:18px;line-height:1;padding:0}
+.del:hover{color:var(--danger);background:var(--well)}
+.del:disabled{opacity:.25;cursor:default;background:transparent;color:var(--muted)}
+.gfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+@media (max-width:720px){
+  .ghead{display:none}
+  .grow{grid-template-columns:28px repeat(4,minmax(0,1fr)) 24px;grid-template-areas:"sw ra ra en en de" "lv lv lv lv lv lv" "dt dt dt ph ph ph";row-gap:6px;padding:8px 2px;border-bottom:1px solid var(--line)}
+  .grow:last-child{border-bottom:0}
+  .sw{grid-area:sw}.ratio{grid-area:ra}.c-lv{grid-area:lv}.c-dt{grid-area:dt}.c-ph{grid-area:ph}.envsel{grid-area:en;justify-self:end}.del{grid-area:de}
+  .cell{grid-template-columns:26px minmax(0,1fr) 38px}
+  .cell .cl{display:block;font-size:11px;color:var(--muted)}
+}
+
+/* preview */
+.pblock{display:flex;flex-direction:column;gap:6px}
+.plab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;font-size:12px;color:var(--muted)}
+.plab b{font-weight:600;color:var(--ink);font-size:12.5px}
+#cvWave{height:116px}
+#cvHarm{height:128px;touch-action:none}
+#cvScope{height:104px}
+
+/* envelope */
+.envtabs{display:inline-flex;gap:3px;background:var(--well);border:1px solid var(--line);border-radius:8px;padding:3px}
+.envtabs button{border:0;background:transparent;color:var(--muted);font:600 12px var(--f-body);padding:4px 11px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.envtabs button i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.envtabs button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+#cvEnv{height:190px;touch-action:none}
+.p-env,.p-eq{container-type:inline-size}
+.knobs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px}
+@container (max-width:470px){.knobs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* eq */
+#cvEq{height:240px;touch-action:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;background:var(--well);overflow:hidden}
+.chip[aria-current="true"]{border-color:var(--env-b);box-shadow:inset 0 0 0 1px var(--env-b)}
+.chip .dot{width:26px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
+.chip .dot::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid var(--muted)}
+.chip .dot[aria-pressed="true"]::before{background:var(--accent);border-color:var(--accent)}
+.chip .cm{border:0;background:transparent;font:500 12px var(--f-body);padding:6px 10px 6px 0;cursor:pointer;text-align:left;display:flex;gap:6px;align-items:baseline}
+.chip .cm small{font-family:var(--f-mono);color:var(--muted);font-size:11px}
+.chip.off .cm span{color:var(--muted)}
+.bandctl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px;align-items:end}
+@container (max-width:560px){.bandctl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* keyboard */
+.kbbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.kbbar .hint{flex:1 1 280px}
+.oct{display:flex;align-items:center;gap:4px}
+.oct output{min-width:30px;text-align:center;font-size:13px}
+#kb{position:relative;height:150px;display:flex;gap:2px;padding:2px;touch-action:none;user-select:none;-webkit-user-select:none;background:var(--key-gap);border-radius:8px;overflow:hidden}
+.key{cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;font:500 10px var(--f-mono);transition:background-color .05s}
+.kw{flex:1 1 0;min-width:0;background:var(--key-white);border-radius:2px 2px 6px 6px;padding-bottom:8px;color:var(--muted)}
+.kbk{position:absolute;top:2px;height:58%;background:var(--key-black);border-radius:0 0 5px 5px;z-index:2;padding-bottom:6px;color:var(--key-black-ink)}
+.key.down{background:var(--accent);color:var(--accent-ink)}
+.key.latched:not(.down){box-shadow:inset 0 -5px 0 var(--accent)}
+.kl{font-weight:600}
+.nl{opacity:.75}
+
+/* signal flow */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;color:var(--muted);font-size:12px;padding:2px 2px 0}
+.flow > span{font-family:var(--f-display);font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.flow ol{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.flow li{display:flex;align-items:center;gap:6px}
+.flow li:not(:last-child)::after{content:"→";color:var(--line)}
+.flow li b{font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+
+/* fourier lab */
+.navlink{color:var(--accent);text-decoration:underline;text-underline-offset:3px;font-weight:500}
+.p-lab{grid-column:1/-1}
+.lab{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px 32px;align-items:start}
+.lesson{min-width:0;display:flex;flex-direction:column;gap:16px;max-width:62ch}
+.lead{margin:0;font-size:15px;line-height:1.65;text-wrap:pretty}
+.formula{background:var(--well);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;overflow-x:auto}
+math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern Math",math}
+.vars{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 14px;margin:0;font-size:12.5px;color:var(--muted)}
+.vars dt{font-family:var(--f-mono);color:var(--ink);font-style:italic}
+.vars dd{margin:0}
+.vars b{color:var(--ink);font-weight:600}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px;counter-reset:step}
+.steps li{counter-increment:step;display:grid;grid-template-columns:26px minmax(0,1fr);column-gap:12px;row-gap:6px}
+.steps li > *{grid-column:2}
+.steps li::before{content:counter(step);grid-column:1;grid-row:1 / span 4;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font:600 12px var(--f-mono);color:var(--muted)}
+.steps h3{margin:2px 0 0;font-size:15px;font-weight:600;text-wrap:balance}
+.steps p{margin:0;line-height:1.7;text-wrap:pretty}
+.steps .note{font-size:12.5px;color:var(--muted)}
+.try{display:flex;flex-wrap:wrap;gap:6px}
+.trybtn{font:500 12px var(--f-body);border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:3px 11px;cursor:pointer}
+.trybtn:hover{background:var(--accent);color:var(--accent-ink)}
+.tablewrap{overflow-x:auto}
+.recipe{border-collapse:collapse;font-size:12.5px;width:100%;min-width:430px}
+.recipe th,.recipe td{text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.recipe th{font-weight:500;color:var(--muted);font-size:11.5px}
+.recipe td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.labbox{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px;min-width:0}
+.labctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end}
+.labctl .nsl{flex:1 1 220px}
+.seg.shape button{width:auto;padding:6px 13px;font:600 12px var(--f-body)}
+.seg.shape button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted)}
+.legend > span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:26px;height:12px;border-radius:3px;background:var(--screen);position:relative}
+.legend i::after{content:"";position:absolute;left:4px;right:4px;top:5px;border-top:2px solid var(--trace)}
+.legend i.lg-dash::after{border-top:2px dashed var(--screen-dim)}
+.legend i.lg-last::after{border-top-color:var(--lg-last,var(--env-a))}
+#cvLab{height:220px}
+#cvStem{height:132px;touch-action:none;cursor:pointer}
+.readout{display:flex;flex-wrap:wrap;gap:6px}
+.labactions{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:980px){
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .labbox{order:-1;position:static}
+  .lesson{max-width:none}
+}
+
+/* missions */
+.p-mis{grid-column:1/-1}
+.mis{display:grid;grid-template-columns:minmax(220px,290px) minmax(0,1fr);gap:20px 28px;align-items:start}
+.mlist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.mitem{width:100%;display:grid;grid-template-columns:26px minmax(0,1fr) 20px;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 10px;cursor:pointer;font:500 13px var(--f-body)}
+.mitem:hover{border-color:var(--accent)}
+.mitem[aria-current="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mitem .mn{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font:600 11px var(--f-mono);color:var(--muted)}
+.mitem .mt{display:flex;flex-direction:column;min-width:0}
+.mitem small{font:400 11px var(--f-mono);color:var(--muted)}
+.mitem .mc{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:transparent}
+.mitem.done .mc{background:var(--good);color:var(--good-ink)}
+.mitem.done .mn{border-color:var(--good);color:var(--good)}
+.mdetail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.eyebrow{font:600 11px var(--f-mono);letter-spacing:.08em;color:var(--muted)}
+.mdetail h3{margin:2px 0 0;font-size:20px;font-weight:600;text-wrap:balance}
+.mgoal{margin:0;font-size:15px;line-height:1.6;text-wrap:pretty}
+.mwhy{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+.mwhy b{color:var(--ink);font-weight:600;margin-right:6px}
+.rules,.mact{display:flex;flex-wrap:wrap;gap:6px 8px}
+.hintbox{margin:0;padding:10px 12px;border-radius:8px;background:var(--well);border:1px dashed var(--line);font-size:13px;line-height:1.6}
+.gauge{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--well)}
+.gnum{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.gnum output{font:500 38px/1 var(--f-mono);letter-spacing:-.02em}
+.verdict.pass{color:var(--good);border-color:var(--good)}
+.gbar{position:relative;height:10px;border-radius:5px;background:var(--panel);border:1px solid var(--line);flex:1 1 auto;min-width:80px}
+.gbar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:5px;background:var(--accent);transition:width .15s}
+.gbar.pass i{background:var(--good)}
+.gbar b{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);transform:translateX(-1px)}
+.mfb{margin:0;font-size:13px;line-height:1.55}
+.legend i.lg-t::after{top:2px;bottom:2px;left:9px;right:9px;border:1.5px solid var(--env-b);border-radius:1px}
+.legend i.lg-s::after{top:2px;bottom:2px;left:9px;right:9px;border:0;background:var(--env-a);border-radius:1px}
+#cvMis{height:200px}
+.hud{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 22px rgba(0,0,0,.14);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.hud-in{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.hud-t{font-weight:600;font-size:13px;flex:1 1 180px;min-width:0}
+.hud-t small{display:block;font:400 11px var(--f-mono);color:var(--muted)}
+.hud-g{display:flex;align-items:center;gap:10px;flex:2 1 220px}
+.hud-g output{font:500 15px var(--f-mono);min-width:44px;text-align:right}
+.hud-b{display:flex;flex-wrap:wrap;gap:6px}
+:root.hud-on body{padding-bottom:130px}
+@media (max-width:860px){
+  .mis{grid-template-columns:minmax(0,1fr)}
+  .mlist{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}
+  .mitem{grid-template-columns:22px minmax(0,1fr) 16px;gap:8px;padding:7px 8px;font-size:12.5px}
+  .mitem .mn{width:22px;height:22px}
+  .mitem .mc{width:16px;height:16px;font-size:10px}
+}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Sine Garden</h1>
+      <p>사인파를 겹쳐 소리를 만드는 가산 합성기 · <a class="navlink" href="#fourier">푸리에 합성 배우기 ↓</a> · <a class="navlink" href="#missions">소리 맞히기 미션 ↓</a></p>
+    </div>
+    <div class="topctl">
+      <label class="field" for="preset"><span>프리셋</span><select id="preset"></select></label>
+      <label class="field vol" for="vol"><span>마스터</span><input id="vol" type="range" min="0" max="100" step="1" value="80"><output id="volOut">−3.9 dB</output></label>
+      <div class="meter" id="meter" aria-hidden="true"><i id="meterBar"></i><b id="meterPeak"></b></div>
+      <button id="audioBtn" class="btn primary" type="button">소리 켜기</button>
+      <span id="audioState" class="pill">꺼짐</span>
+    </div>
+  </header>
+
+  <section class="panel p-gen" aria-labelledby="h-gen">
+    <div class="ph">
+      <h2 id="h-gen">Generators <span>사인 오실레이터</span></h2>
+      <span class="pill" id="gCount">8 / 16</span>
+    </div>
+    <div class="ghead" aria-hidden="true"><span></span><span>배율 (× 음높이)</span><span>레벨</span><span>디튠</span><span>위상</span><span>Env</span><span></span></div>
+    <div class="glist" id="genList"></div>
+    <div class="gfoot">
+      <button id="addP" class="btn" type="button">+ 사인 추가</button>
+      <p class="hint">배율 1은 누른 음, 2는 한 옥타브 위, 1.5는 완전5도 위입니다. 정수가 아닌 배율은 종처럼 금속성 소리를 냅니다.</p>
+    </div>
+  </section>
+
+  <section class="panel p-prev" aria-labelledby="h-prev">
+    <div class="ph"><h2 id="h-prev">Preview <span>합성 결과 보기</span></h2></div>
+    <div class="pblock">
+      <div class="plab"><b>합성 파형</b><span>기본음 두 주기 · 흰 선이 합계</span></div>
+      <canvas id="cvWave" class="screen" role="img" aria-label="켜진 사인들과 그 합의 파형"></canvas>
+    </div>
+    <div class="pblock">
+      <div class="plab"><b>배음 지도</b><span>막대를 끌어 레벨 조절 · 빈 곳 더블클릭으로 추가</span></div>
+      <canvas id="cvHarm" class="screen" role="img" aria-label="사인별 배율과 레벨 막대 그래프"></canvas>
+    </div>
+    <div class="pblock">
+      <div class="plab"><b>출력 오실로스코프</b><span>실제로 나가는 소리</span></div>
+      <canvas id="cvScope" class="screen" role="img" aria-label="실시간 출력 파형"></canvas>
+    </div>
+  </section>
+
+  <section class="panel p-env" aria-labelledby="h-env">
+    <div class="ph">
+      <h2 id="h-env">Envelope <span>소리의 시작과 끝</span></h2>
+      <div class="envtabs" role="group" aria-label="편집할 엔벨로프">
+        <button type="button" data-tab="A" aria-pressed="true"><i style="background:var(--env-a)"></i>Env A</button>
+        <button type="button" data-tab="B" aria-pressed="false"><i style="background:var(--env-b)"></i>Env B</button>
+      </div>
+    </div>
+    <canvas id="cvEnv" class="screen" role="img" aria-label="ADSR 엔벨로프 그래프. 점을 끌어 조절"></canvas>
+    <div class="knobs" id="envKnobs">
+      <label class="knob" for="env-a"><span class="kt"><span>Attack</span><output id="o-a"></output></span><input id="env-a" type="range" min="0" max="1000" step="1"></label>
+      <label class="knob" for="env-d"><span class="kt"><span>Decay</span><output id="o-d"></output></span><input id="env-d" type="range" min="0" max="1000" step="1"></label>
+      <label class="knob" for="env-s"><span class="kt"><span>Sustain</span><output id="o-s"></output></span><input id="env-s" type="range" min="0" max="100" step="1"></label>
+      <label class="knob" for="env-r"><span class="kt"><span>Release</span><output id="o-r"></output></span><input id="env-r" type="range" min="0" max="1000" step="1"></label>
+    </div>
+    <p class="hint" id="envUse"></p>
+  </section>
+
+  <section class="panel p-eq" id="eq" aria-labelledby="h-eq">
+    <div class="ph">
+      <h2 id="h-eq">Equalizer <span>6밴드 파라메트릭 EQ</span></h2>
+      <div class="tools">
+        <button id="eqBypass" class="btn" type="button" aria-pressed="false">바이패스</button>
+        <button id="eqFlat" class="btn" type="button">평탄하게</button>
+      </div>
+    </div>
+    <canvas id="cvEq" class="screen" role="img" aria-label="EQ 주파수 응답과 실시간 스펙트럼"></canvas>
+    <p class="hint">번호 점을 끌어 주파수·게인 조절 · 점 위에서 휠로 Q 조절 · 점 더블클릭으로 밴드 켜고 끄기</p>
+    <div class="chips" id="chips"></div>
+    <div class="bandctl">
+      <label class="knob" for="bType"><span class="kt"><span id="bTitle">밴드 유형</span></span><select id="bType"></select></label>
+      <label class="knob" for="bFreq"><span class="kt"><span>주파수</span><output id="o-freq"></output></span><input id="bFreq" type="range" min="0" max="1000" step="1"></label>
+      <label class="knob" for="bGain"><span class="kt"><span>게인</span><output id="o-gain"></output></span><input id="bGain" class="bi" type="range" min="-18" max="18" step="0.1"></label>
+      <label class="knob" for="bQ"><span class="kt"><span>Q</span><output id="o-q"></output></span><input id="bQ" type="range" min="0" max="1000" step="1"></label>
+    </div>
+  </section>
+
+  <section class="panel p-keys" aria-labelledby="h-keys">
+    <div class="kbbar">
+      <div class="ph"><h2 id="h-keys">Keyboard <span>건반</span></h2></div>
+      <p class="hint">컴퓨터 키보드 <kbd>A</kbd>–<kbd>K</kbd> 흰 건반, <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> 검은 건반, <kbd>Z</kbd> <kbd>X</kbd> 옥타브 이동</p>
+      <div class="tools">
+        <span class="pill" id="voiceCount">보이스 0</span>
+        <div class="oct"><button class="mini" id="octDown" type="button" aria-label="옥타브 내리기">−</button><output id="octOut">C4</output><button class="mini" id="octUp" type="button" aria-label="옥타브 올리기">+</button></div>
+        <button id="holdBtn" class="btn" type="button" aria-pressed="false">홀드</button>
+        <button id="panicBtn" class="btn" type="button">모든 소리 끄기</button>
+      </div>
+    </div>
+    <div id="kb" role="group" aria-label="화면 건반"></div>
+  </section>
+
+  <section class="panel p-lab" id="fourier" aria-labelledby="h-lab">
+    <div class="ph"><h2 id="h-lab">Fourier Lab <span>푸리에 합성 배우기</span></h2></div>
+    <div class="lab">
+      <div class="lesson">
+        <p class="lead">Sine Garden의 소리는 모두 사인파를 더해서 만듭니다. 이 방법을 푸리에 합성이라고 합니다. 아래 순서대로 읽으면서 실험실에서 사인을 하나씩 더해 보세요.</p>
+        <div class="formula">
+          <math display="block" aria-label="x(t)는 n이 1부터 무한대까지, A n 곱하기 사인 괄호 2 파이 n f 0 t 더하기 파이 n 의 합">
+            <mrow>
+              <mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+              <mo>=</mo>
+              <munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi>∞</mi></munderover>
+              <msub><mi>A</mi><mi>n</mi></msub>
+              <mi>sin</mi><mo>&#x2061;</mo>
+              <mo>(</mo><mn>2</mn><mi>π</mi><mi>n</mi><msub><mi>f</mi><mn>0</mn></msub><mi>t</mi><mo>+</mo><msub><mi>φ</mi><mi>n</mi></msub><mo>)</mo>
+            </mrow>
+          </math>
+          <dl class="vars">
+            <dt>f<sub>0</sub></dt><dd>기본 주파수. 누른 건반의 음높이</dd>
+            <dt>n</dt><dd>배음 번호. 합성기의 <b>배율</b></dd>
+            <dt>A<sub>n</sub></dt><dd>n번째 사인의 크기. 합성기의 <b>레벨</b></dd>
+            <dt>φ<sub>n</sub></dt><dd>n번째 사인의 시작 위치. 합성기의 <b>위상</b></dd>
+          </dl>
+        </div>
+        <ol class="steps">
+          <li>
+            <h3>반복되는 소리는 사인의 합</h3>
+            <p>푸리에는 1807년 열 전도를 연구하다가, 일정하게 반복되는 신호는 기본 주파수의 정수배(배음)인 사인들을 더해 만들 수 있다고 주장했습니다. 사인마다 크기와 위상만 정하면 됩니다. 사인 하나에서 시작해 N을 한 칸씩 올려 보세요.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="n1">사인 하나부터 보기</button></div>
+          </li>
+          <li>
+            <h3>파형마다 정해진 레시피</h3>
+            <p>어떤 배음을 얼마나 섞느냐가 파형과 음색을 정합니다. 진폭이 천천히 줄어들수록 높은 배음이 많이 남아 소리가 밝아집니다.</p>
+            <div class="tablewrap">
+              <table class="recipe">
+                <thead><tr><th scope="col">파형</th><th scope="col">쓰는 배음 n</th><th scope="col">진폭 A<sub>n</sub></th><th scope="col">위상 φ<sub>n</sub></th><th scope="col">음색</th></tr></thead>
+                <tbody>
+                  <tr><td>톱니파</td><td class="m">1, 2, 3, 4 … 전부</td><td class="m">1/n</td><td>짝수 n만 180°</td><td>밝고 거칠다</td></tr>
+                  <tr><td>사각파</td><td class="m">1, 3, 5 … 홀수만</td><td class="m">1/n</td><td>모두 0°</td><td>속이 빈 듯하다</td></tr>
+                  <tr><td>삼각파</td><td class="m">1, 3, 5 … 홀수만</td><td class="m">1/n²</td><td>n = 3, 7, 11 …만 180°</td><td>부드럽다</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">위상 180°는 그 사인을 뒤집어서(− 부호로) 더한다는 뜻입니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="saw">톱니파</button><button class="trybtn" type="button" data-try="square">사각파</button><button class="trybtn" type="button" data-try="tri">삼각파</button></div>
+          </li>
+          <li>
+            <h3>깁스 현상: 끝까지 남는 9%</h3>
+            <p>톱니파와 사각파처럼 값이 갑자기 뛰는 곳 근처에서는 사인을 아무리 많이 더해도 합이 목표보다 튀어 오릅니다. N을 늘리면 이 뿔은 좁아질 뿐, 높이는 점프 크기의 약 9%에서 더 줄지 않습니다. 1848년 윌브러햄이 처음 발견했고, 1899년 깁스가 다시 설명해 깁스 현상이라고 부릅니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="gibbs">사각파를 N = 32까지</button></div>
+          </li>
+          <li>
+            <h3>위상은 모양만 바꾼다</h3>
+            <p>진폭은 그대로 두고 위상만 섞으면 파형 모양은 완전히 달라지지만, 귀에는 거의 같은 소리로 들립니다. 헬름홀츠는 1863년 음색이 주로 배음의 세기로 정해진다고 결론지었습니다. 다만 아주 낮은 음이나 큰 소리에서는 차이가 들리기도 합니다.</p>
+            <p class="note">‘합성기로 보내기’를 누르고 ‘C4 계속 울리기’를 켠 채 위상을 섞으면 바로 비교할 수 있습니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="scramble">위상 섞기</button></div>
+          </li>
+          <li>
+            <h3>정수배가 아니면 종소리</h3>
+            <p>배율이 정수가 아니면 사인들의 합이 같은 모양으로 돌아오지 않습니다. 반복되지 않으니 음높이가 흐려지고 종이나 금속판처럼 들립니다. 합성기의 벨 프리셋은 0.56, 0.92, 1.19, 2.74 같은 비정수 배율로 만든 소리입니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="bell">벨 프리셋 열기</button></div>
+          </li>
+          <li>
+            <h3>거꾸로 하면 푸리에 분석</h3>
+            <p>합성은 사인을 더해 소리를 만들고, 분석은 소리를 다시 사인으로 쪼갭니다. EQ 그래프 뒤의 파란 봉우리는 출력 소리를 FFT(고속 푸리에 변환)로 실시간 분해한 결과입니다. 봉우리 하나가 사인 하나입니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="eq">EQ 스펙트럼 보기</button></div>
+          </li>
+        </ol>
+        <p class="note">배운 내용은 소리 맞히기 미션에서 확인할 수 있습니다. <button class="trybtn" type="button" data-try="missions">미션 하러 가기</button></p>
+      </div>
+
+      <div class="labbox" id="labBox">
+        <div class="labctl">
+          <div class="seg shape" role="group" aria-label="목표 파형">
+            <button type="button" data-shape="saw" aria-pressed="false">톱니파</button>
+            <button type="button" data-shape="square" aria-pressed="true">사각파</button>
+            <button type="button" data-shape="tri" aria-pressed="false">삼각파</button>
+          </div>
+          <label class="knob nsl" for="labN"><span class="kt"><span>더한 배음 (n ≤ N)</span><output id="labNOut">N = 5</output></span><input id="labN" type="range" min="1" max="32" step="1" value="5"></label>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="lg-dash"></i>목표 파형</span>
+          <span><i class="lg-last" id="lgLast"></i><span id="lgLastTxt">방금 더한 사인</span></span>
+          <span><i></i>사인들의 합</span>
+        </div>
+        <canvas id="cvLab" class="screen" role="img" aria-label="목표 파형과 사인 합 비교, 기본음 두 주기"></canvas>
+        <div class="readout"><span class="pill" id="labCount"></span><span class="pill" id="labErr"></span><span class="pill" id="labGibbs"></span></div>
+        <div class="plab"><b>배음 레시피</b><span>막대는 진폭 A<sub>n</sub>, 아래 바늘은 위상 φ<sub>n</sub> (오른쪽 0°, 왼쪽 180°) · 눌러서 N 정하기</span></div>
+        <canvas id="cvStem" class="screen" role="img" aria-label="배음별 진폭과 위상"></canvas>
+        <div class="labactions">
+          <button id="labSend" class="btn primary" type="button">합성기로 보내기</button>
+          <button id="labDemo" class="btn" type="button" aria-pressed="false">들으며 쌓기</button>
+          <button id="labDrone" class="btn" type="button" aria-pressed="false">C4 계속 울리기</button>
+          <button id="labScramble" class="btn" type="button">위상 섞기</button>
+          <button id="labReset" class="btn" type="button" disabled>위상 되돌리기</button>
+        </div>
+        <p class="hint" id="labStatus"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel p-mis" id="missions" aria-labelledby="h-mis">
+    <div class="ph">
+      <h2 id="h-mis">Missions <span>소리 맞히기 미션</span></h2>
+      <div class="tools">
+        <span class="pill" id="misDone">0 / 8 성공</span>
+        <button id="misHard" class="btn" type="button" aria-pressed="false">목표 스펙트럼 숨기기</button>
+        <button id="misClear" class="btn" type="button">기록 지우기</button>
+      </div>
+    </div>
+    <p class="hint">목표 소리를 듣고 위쪽 사인 오실레이터로 비슷한 소리를 만드세요. 배음마다 세기(dB)를 비교해 닮은 정도를 계산합니다. 귀가 거의 구분하지 못하는 위상과, 음색과는 따로인 엔벨로프는 채점하지 않습니다.</p>
+    <div class="mis">
+      <ol class="mlist" id="misList"></ol>
+      <div class="mdetail">
+        <div><span class="eyebrow" id="misNum">미션 1 / 8</span><h3 id="misTitle"></h3></div>
+        <p class="mgoal" id="misGoal"></p>
+        <p class="mwhy"><b>배울 점</b><span id="misWhy"></span></p>
+        <div class="rules" id="misRules"></div>
+        <div class="mact">
+          <button id="misTarget" class="btn primary" type="button">목표 듣기</button>
+          <button id="misMine" class="btn" type="button">내 소리 듣기</button>
+          <button id="misAB" class="btn" type="button">번갈아 듣기</button>
+          <button id="misHint" class="btn" type="button" aria-pressed="false">힌트</button>
+          <button id="misReset" class="btn" type="button">사인 하나로 시작</button>
+          <button id="misBuild" class="btn" type="button">만들러 가기 ↑</button>
+        </div>
+        <p class="hintbox" id="misHintText" hidden></p>
+        <div class="gauge" aria-live="polite">
+          <div class="gnum"><output id="misPct">0%</output><span class="pill verdict" id="misVerdict">도전 중</span><span class="hint" id="misNow"></span></div>
+          <div class="gbar" id="misBar"><i id="misFill"></i><b id="misThr"></b></div>
+          <p class="mfb" id="misFeedback"></p>
+        </div>
+        <div class="legend" aria-hidden="true"><span><i class="lg-t"></i>목표</span><span><i class="lg-s"></i>내 소리</span><span>세로축은 dB · 10 dB 낮으면 진폭은 약 1/3</span></div>
+        <canvas id="cvMis" class="screen" role="img" aria-label="목표와 내 소리의 배음 세기 비교"></canvas>
+        <div><button id="misNext" class="btn primary" type="button" hidden>다음 미션 →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="flow">
+    <span>Signal flow</span>
+    <ol>
+      <li><b>사인 × N</b></li>
+      <li><b>레벨 · 디튠</b></li>
+      <li><b>Env A / B</b></li>
+      <li><b>보이스 합</b></li>
+      <li><b>EQ 6밴드</b></li>
+      <li><b>리미터</b></li>
+      <li><b>마스터</b></li>
+    </ol>
+  </footer>
+</div>
+
+<div class="hud" id="hud" hidden>
+  <div class="hud-in">
+    <div class="hud-t"><small id="hudNum">미션 1</small><span id="hudTitle"></span></div>
+    <div class="hud-g"><div class="gbar" id="hudBar"><i id="hudFill"></i><b id="hudThr"></b></div><output id="hudPct">0%</output></div>
+    <div class="hud-b">
+      <button class="btn" id="hudTarget" type="button">목표 듣기</button>
+      <button class="btn" id="hudMine" type="button">내 소리</button>
+      <button class="btn" id="hudGo" type="button">미션 보기 ↓</button>
+      <button class="btn" id="hudClose" type="button" aria-label="미션 바 닫기">×</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const TAU = Math.PI * 2;
+const MAX_P = 16;
+const ENV_MAX = { a: 5, d: 8, r: 10 };
+const T_MIN = 0.001;
+const EQ_MIN = 20, EQ_MAX = 20000, EQ_DB = 18, Q_MIN = 0.1, Q_MAX = 18;
+const KEY_LETTERS = ['A','W','S','E','D','F','T','G','Y','H','U','J','K','O','L','P',';',"'"];
+const CODE_MAP = { KeyA:0, KeyW:1, KeyS:2, KeyE:3, KeyD:4, KeyF:5, KeyT:6, KeyG:7, KeyY:8, KeyH:9, KeyU:10, KeyJ:11, KeyK:12, KeyO:13, KeyL:14, KeyP:15, Semicolon:16, Quote:17 };
+
+const TYPES = {
+  highpass:  { label: '로우 컷',   gain: false, q: true },
+  lowshelf:  { label: '로우 셸프', gain: true,  q: false },
+  peaking:   { label: '피크',      gain: true,  q: true },
+  highshelf: { label: '하이 셸프', gain: true,  q: false },
+  lowpass:   { label: '하이 컷',   gain: false, q: true },
+  notch:     { label: '노치',      gain: false, q: true },
+};
+
+const P = (ratio, level, extra) => ({ ratio, level, ...extra });
+const PRESETS = {
+  saw: {
+    name: '톱니파 근사 (사인 8개)',
+    envs: { A: { a: .005, d: .4, s: .6, r: .25 }, B: { a: .005, d: .4, s: .6, r: .25 } },
+    partials: [1, 2, 3, 4, 5, 6, 7, 8].map(n => P(n, Math.round(100 / n) / 100, { phase: n % 2 ? 0 : 180 })),
+  },
+  square: {
+    name: '사각파 근사 (홀수 배음)',
+    envs: { A: { a: .01, d: .25, s: .7, r: .2 }, B: { a: .01, d: .25, s: .7, r: .2 } },
+    partials: [1, 3, 5, 7, 9, 11, 13, 15].map(n => P(n, Math.round(100 / n) / 100)),
+  },
+  organ: {
+    name: '오르간',
+    envs: { A: { a: .006, d: .05, s: 1, r: .08 }, B: { a: .006, d: .05, s: 1, r: .08 } },
+    partials: [[.5, .75], [1, 1], [1.5, .55], [2, .7], [3, .4], [4, .45], [6, .2], [8, .3]].map(([r, l]) => P(r, l)),
+  },
+  bell: {
+    name: '벨 (비정수 배음)',
+    envs: { A: { a: .002, d: 4, s: 0, r: 3 }, B: { a: .001, d: 1.1, s: 0, r: .9 } },
+    partials: [[.56, 1, 0, 'A'], [.92, .9, 3, 'A'], [1.19, .75, 0, 'A'], [1.7, .6, 0, 'B'], [2, .5, 0, 'B'], [2.74, .45, 0, 'B'], [3, .35, 0, 'B'], [3.76, .3, 0, 'B'], [4.07, .25, 0, 'B']]
+      .map(([r, l, detune, env]) => P(r, l, { detune, env })),
+  },
+  pad: {
+    name: '글라스 패드',
+    envs: { A: { a: .9, d: 1.5, s: .8, r: 1.8 }, B: { a: 1.8, d: 2, s: .6, r: 2.4 } },
+    partials: [[1, 1, -6, 'A'], [1, .9, 6, 'A'], [2, .55, -4, 'A'], [2, .5, 5, 'A'], [3, .35, 0, 'B'], [4, .25, 3, 'B'], [5, .15, -3, 'B']]
+      .map(([r, l, detune, env]) => P(r, l, { detune, env })),
+  },
+  sine: {
+    name: '사인 하나',
+    envs: { A: { a: .01, d: .3, s: .8, r: .4 }, B: { a: .01, d: .3, s: .8, r: .4 } },
+    partials: [P(1, 1)],
+  },
+};
+const DEFAULT_EQ = () => [
+  { type: 'highpass',  freq: 30,    gain: 0,  q: .71, on: true },
+  { type: 'lowshelf',  freq: 120,   gain: 2,  q: .71, on: true },
+  { type: 'peaking',   freq: 450,   gain: -2, q: 1.2, on: true },
+  { type: 'peaking',   freq: 2500,  gain: 3,  q: 1,   on: true },
+  { type: 'highshelf', freq: 9000,  gain: -3, q: .71, on: true },
+  { type: 'lowpass',   freq: 18000, gain: 0,  q: .71, on: false },
+];
+
+let uid = 1;
+const makePartial = (p) => ({ id: uid++, on: true, ratio: 1, level: 1, detune: 0, phase: 0, env: 'A', ...p });
+const hueOf = (i) => Math.round((205 + i * 137.508) % 360);
+const screenColor = (i) => `hsl(${hueOf(i)} 80% 68%)`;
+
+const state = { preset: 'saw', partials: [], envs: null, eq: DEFAULT_EQ(), eqBypass: false, band: 3, envTab: 'A', master: 80, octave: 4, hold: false };
+const lab = { shape: 'square', N: 5, phases: null, linked: null, drone: false, demo: 0, demoEnd: 0 };
+const dirty = { wave: true, harm: true, env: true, eq: true, resp: true, scope: true, lab: true, stem: true };
+const markAllDirty = () => { for (const k in dirty) dirty[k] = true; };
+
+/* ---------- formatting ---------- */
+const minus = (s) => s.replace('-', '−');
+const fmtRatio = (r) => String(+r.toFixed(3));
+const fmtCents = (c) => c === 0 ? '0¢' : minus(`${c > 0 ? '+' : ''}${c}¢`);
+const fmtTime = (t) => t < 1 ? `${Math.round(t * 1000)} ms` : `${t.toFixed(t < 10 ? 2 : 1)} s`;
+const fmtFreq = (f) => f < 1000 ? `${Math.round(f)} Hz` : `${(f / 1000).toFixed(f < 10000 ? 2 : 1)} kHz`;
+const fmtDb = (g) => minus(`${g > 0 ? '+' : ''}${g.toFixed(1)} dB`);
+const fmtLevel = (l) => l > 0 && l < .0095 ? `${(l * 100).toFixed(1)}%` : `${Math.round(l * 100)}%`;
+const volGain = (v) => Math.pow(v / 100, 2);
+const fmtVol = (v) => v === 0 ? '−∞ dB' : fmtDb(20 * Math.log10(volGain(v)));
+const toLog = (v, lo, hi) => 1000 * Math.log(v / lo) / Math.log(hi / lo);
+const fromLog = (x, lo, hi) => lo * Math.pow(hi / lo, x / 1000);
+const round3 = (v) => Math.max(T_MIN, Math.round(v * 1000) / 1000);
+
+function paintRange(el) {
+  const min = +el.min, max = +el.max, v = +el.value;
+  const pct = (v - min) / (max - min) * 100;
+  let lo = 0, hi = pct;
+  if (el.classList.contains('bi')) { const z = (0 - min) / (max - min) * 100; lo = Math.min(z, pct); hi = Math.max(z, pct); }
+  el.style.setProperty('--lo', lo + '%');
+  el.style.setProperty('--hi', hi + '%');
+}
+
+/* ---------- theme for canvases ---------- */
+const root = document.documentElement;
+let TH = {};
+function readTheme() {
+  const cs = getComputedStyle(root), g = (n) => cs.getPropertyValue(n).trim();
+  TH = { screen: g('--screen'), line: g('--screen-line'), line2: g('--screen-line-2'), ink: g('--screen-ink'), dim: g('--screen-dim'),
+         trace: g('--trace'), envA: g('--env-a'), envB: g('--env-b'), mono: g('--f-mono') || 'monospace', body: g('--f-body') || 'sans-serif' };
+  markAllDirty();
+}
+
+/* ---------- storage (per-viewer convenience) ---------- */
+const STORE = 'sine-garden-v1';
+let saveTimer = 0;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({
+        preset: state.preset, partials: state.partials.map(({ id, ...r }) => r), envs: state.envs,
+        eq: state.eq, eqBypass: state.eqBypass, master: state.master, octave: state.octave,
+      }));
+    } catch (_) { /* storage unavailable */ }
+  }, 400);
+}
+const num = (v, lo, hi, d) => { v = Number(v); return Number.isFinite(v) ? clamp(v, lo, hi) : d; };
+const cleanEnv = (e) => { e = e || {}; return { a: num(e.a, T_MIN, ENV_MAX.a, .01), d: num(e.d, T_MIN, ENV_MAX.d, .3), s: num(e.s, 0, 1, .7), r: num(e.r, T_MIN, ENV_MAX.r, .3) }; };
+function restore() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (!d || !Array.isArray(d.partials) || !d.partials.length || !Array.isArray(d.eq) || d.eq.length !== 6) return false;
+    state.partials = d.partials.slice(0, MAX_P).map(p => makePartial({
+      on: p.on !== false, ratio: num(p.ratio, .01, 64, 1), level: num(p.level, 0, 1, .5),
+      detune: Math.round(num(p.detune, -100, 100, 0)), phase: Math.round(num(p.phase, 0, 355, 0) / 5) * 5, env: p.env === 'B' ? 'B' : 'A',
+    }));
+    state.envs = { A: cleanEnv(d.envs && d.envs.A), B: cleanEnv(d.envs && d.envs.B) };
+    const def = DEFAULT_EQ();
+    state.eq = d.eq.map((b, i) => ({ type: TYPES[b && b.type] ? b.type : def[i].type, freq: num(b && b.freq, EQ_MIN, EQ_MAX, def[i].freq),
+      gain: num(b && b.gain, -EQ_DB, EQ_DB, 0), q: num(b && b.q, Q_MIN, Q_MAX, .71), on: !!(b && b.on) }));
+    state.eqBypass = !!d.eqBypass;
+    state.master = Math.round(num(d.master, 0, 100, 80));
+    state.octave = Math.round(num(d.octave, 1, 7, 4));
+    state.preset = PRESETS[d.preset] ? d.preset : 'custom';
+    return true;
+  } catch (_) { return false; }
+}
+
+/* ---------- biquad math (same formulas Web Audio uses) ---------- */
+function biquad(b, fs) {
+  const f0 = clamp(b.freq, 10, fs * .499), w0 = TAU * f0 / fs, cw = Math.cos(w0), sw = Math.sin(w0);
+  const A = Math.pow(10, b.gain / 40), q = Math.max(b.q, .01);
+  let b0, b1, b2, a0, a1, a2;
+  switch (b.type) {
+    case 'lowpass': { const al = sw / (2 * q); b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = b0; a0 = 1 + al; a1 = -2 * cw; a2 = 1 - al; break; }
+    case 'highpass': { const al = sw / (2 * q); b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = b0; a0 = 1 + al; a1 = -2 * cw; a2 = 1 - al; break; }
+    case 'peaking': { const al = sw / (2 * q); b0 = 1 + al * A; b1 = -2 * cw; b2 = 1 - al * A; a0 = 1 + al / A; a1 = -2 * cw; a2 = 1 - al / A; break; }
+    case 'notch': { const al = sw / (2 * q); b0 = 1; b1 = -2 * cw; b2 = 1; a0 = 1 + al; a1 = -2 * cw; a2 = 1 - al; break; }
+    case 'lowshelf': {
+      const k = 2 * Math.sqrt(A) * (sw / Math.SQRT2);
+      b0 = A * ((A + 1) - (A - 1) * cw + k); b1 = 2 * A * ((A - 1) - (A + 1) * cw); b2 = A * ((A + 1) - (A - 1) * cw - k);
+      a0 = (A + 1) + (A - 1) * cw + k; a1 = -2 * ((A - 1) + (A + 1) * cw); a2 = (A + 1) + (A - 1) * cw - k; break;
+    }
+    case 'highshelf': {
+      const k = 2 * Math.sqrt(A) * (sw / Math.SQRT2);
+      b0 = A * ((A + 1) + (A - 1) * cw + k); b1 = -2 * A * ((A - 1) + (A + 1) * cw); b2 = A * ((A + 1) + (A - 1) * cw - k);
+      a0 = (A + 1) - (A - 1) * cw + k; a1 = 2 * ((A - 1) - (A + 1) * cw); a2 = (A + 1) - (A - 1) * cw - k; break;
+    }
+    default: return [1, 0, 0, 0, 0];
+  }
+  return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+}
+function magDb(co, f, fs) {
+  const w = TAU * f / fs, c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
+  const nr = co[0] + co[1] * c1 + co[2] * c2, ni = co[1] * s1 + co[2] * s2;
+  const dr = 1 + co[3] * c1 + co[4] * c2, di = co[3] * s1 + co[4] * s2;
+  return 10 * Math.log10(Math.max((nr * nr + ni * ni) / (dr * dr + di * di), 1e-12));
+}
+
+/* ---------- audio engine ---------- */
+let ctx = null, bus, eqNodes = [], masterGain, anPre, anPost, anScope;
+let specPre, specPost, scopeBuf;
+const waves = new Map();
+const voices = [];
+const active = new Map();
+
+function initAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) { audioState.textContent = '이 브라우저는 Web Audio를 지원하지 않습니다'; return false; }
+  ctx = new AC({ latencyHint: 'interactive' });
+  bus = ctx.createGain();
+  const sink = ctx.createGain(); sink.gain.value = 0; sink.connect(ctx.destination);
+  const mkAn = (size, smooth) => { const a = ctx.createAnalyser(); a.fftSize = size; a.smoothingTimeConstant = smooth; a.minDecibels = -130; a.maxDecibels = 0; a.connect(sink); return a; };
+  anPre = mkAn(8192, .8); anPost = mkAn(8192, .8); anScope = mkAn(2048, 0);
+  specPre = new Float32Array(anPre.frequencyBinCount);
+  specPost = new Float32Array(anPost.frequencyBinCount);
+  scopeBuf = new Float32Array(anScope.fftSize);
+  eqNodes = state.eq.map(() => ctx.createBiquadFilter());
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -6; comp.knee.value = 4; comp.ratio.value = 12; comp.attack.value = .002; comp.release.value = .12;
+  masterGain = ctx.createGain(); masterGain.gain.value = volGain(state.master);
+  bus.connect(anPre);
+  let n = bus;
+  for (const f of eqNodes) { n.connect(f); n = f; }
+  n.connect(comp); comp.connect(masterGain);
+  masterGain.connect(ctx.destination); masterGain.connect(anPost); masterGain.connect(anScope);
+  eqNodes.forEach((node, i) => applyBand(node, state.eq[i], true));
+  ctx.onstatechange = updateAudioUI;
+  dirty.resp = true;
+  updateAudioUI();
+  return true;
+}
+function ensureAudio() {
+  if (!ctx && !initAudio()) return false;
+  if (ctx.state === 'suspended') ctx.resume();
+  return true;
+}
+function waveFor(deg) {
+  deg = ((Math.round(deg) % 360) + 360) % 360;
+  let w = waves.get(deg);
+  if (!w) {
+    const ph = deg * Math.PI / 180;
+    // real*cos + imag*sin = sin(x + phase)
+    w = ctx.createPeriodicWave(new Float32Array([0, Math.sin(ph)]), new Float32Array([0, Math.cos(ph)]), { disableNormalization: true });
+    waves.set(deg, w);
+  }
+  return w;
+}
+function bandParams(b) {
+  if (!b.on || state.eqBypass) return { type: 'allpass', freq: 1000, gain: 0, Q: .7 };
+  const cut = b.type === 'highpass' || b.type === 'lowpass';
+  // Web Audio reads Q in dB for low/high-pass filters
+  return { type: b.type, freq: b.freq, gain: b.gain, Q: cut ? 20 * Math.log10(b.q) : b.q };
+}
+function applyBand(node, b, immediate) {
+  const p = bandParams(b);
+  if (node.type !== p.type) node.type = p.type;
+  if (immediate) { node.frequency.value = p.freq; node.gain.value = p.gain; node.Q.value = p.Q; return; }
+  const t = ctx.currentTime;
+  node.frequency.setTargetAtTime(p.freq, t, .012);
+  node.gain.setTargetAtTime(p.gain, t, .012);
+  node.Q.setTargetAtTime(p.Q, t, .012);
+}
+const applyLive = (i) => { if (ctx && eqNodes[i]) applyBand(eqNodes[i], state.eq[i], false); };
+
+const findP = (id) => state.partials.find(p => p.id === id);
+const effLevel = (p, f) => (p.on && f * p.ratio * Math.pow(2, p.detune / 1200) < ctx.sampleRate * .48) ? p.level : 0;
+function voiceNorm(list = state.partials) { let s = 0; for (const p of list) if (p.on) s += p.level; return .32 / Math.max(1, s); }
+function envValue(e, el) {
+  if (el <= 0) return 0;
+  if (el < e.a) return el / e.a;
+  return e.s + (1 - e.s) * Math.exp(-(el - e.a) / (Math.max(e.d, T_MIN) / 4));
+}
+function scheduleAttack(param, e, t) {
+  param.cancelScheduledValues(t);
+  param.setValueAtTime(0, t);
+  param.linearRampToValueAtTime(1, t + e.a);
+  param.setTargetAtTime(e.s, t + e.a, Math.max(e.d, T_MIN) / 4);
+}
+
+function noteOn(midi) {
+  if (!ensureAudio()) return;
+  const prev = active.get(midi);
+  if (prev) releaseVoice(prev, .02);
+  active.set(midi, startVoice(midi, state.partials, state.envs, false));
+  updateVoiceCount();
+}
+// fixed voices (mission auditions) ignore live edits to the generators
+function startVoice(midi, partials, envs, fixed) {
+  const t = ctx.currentTime + .003;
+  const f = 440 * Math.pow(2, (midi - 69) / 12);
+  const out = ctx.createGain(); out.gain.value = voiceNorm(partials); out.connect(bus);
+  const envSnap = { A: { ...envs.A }, B: { ...envs.B } };
+  const eg = {};
+  for (const k of ['A', 'B']) { eg[k] = ctx.createGain(); eg[k].gain.value = 0; eg[k].connect(out); scheduleAttack(eg[k].gain, envSnap[k], t); }
+  const parts = partials.map(p => {
+    const osc = ctx.createOscillator();
+    osc.setPeriodicWave(waveFor(p.phase));
+    osc.frequency.value = f * p.ratio;
+    osc.detune.value = p.detune;
+    const lv = ctx.createGain(); lv.gain.value = effLevel(p, f);
+    osc.connect(lv); lv.connect(eg[p.env]);
+    osc.start(t);
+    return { pid: p.id, osc, lv };
+  });
+  const v = { midi, f, out, eg, envSnap, parts, t0: t, tRel: null, relVal: { A: 0, B: 0 }, relR: { A: 0, B: 0 }, fixed };
+  voices.push(v);
+  return v;
+}
+function releaseVoice(v, forceR) {
+  if (v.tRel !== null) return;
+  const t = ctx.currentTime;
+  v.tRel = t;
+  let maxR = 0;
+  for (const k of ['A', 'B']) {
+    const r = Math.max(forceR !== undefined ? forceR : state.envs[k].r, .005);
+    const val = envValue(v.envSnap[k], t - v.t0);
+    const g = v.eg[k].gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(val, t); g.setTargetAtTime(0, t, r / 5);
+    v.relVal[k] = val; v.relR[k] = r; maxR = Math.max(maxR, r);
+  }
+  const stopAt = t + maxR * 1.6 + .05;
+  for (const vp of v.parts) { try { vp.osc.stop(stopAt); } catch (_) { /* already stopped */ } }
+  if (active.get(v.midi) === v) active.delete(v.midi);
+  setTimeout(() => {
+    v.out.disconnect();
+    const i = voices.indexOf(v); if (i >= 0) voices.splice(i, 1);
+    updateVoiceCount();
+  }, (stopAt - t) * 1000 + 80);
+  updateVoiceCount();
+}
+function liveLevels() {
+  if (!ctx) return;
+  const t = ctx.currentTime, n = voiceNorm();
+  for (const v of voices) {
+    if (v.fixed) continue;
+    v.out.gain.setTargetAtTime(n, t, .02);
+    for (const vp of v.parts) { const p = findP(vp.pid); vp.lv.gain.setTargetAtTime(p ? effLevel(p, v.f) : 0, t, .015); }
+  }
+}
+function liveFreq(p) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (const v of voices) {
+    if (v.fixed) continue;
+    const vp = v.parts.find(x => x.pid === p.id); if (!vp) continue;
+    vp.osc.frequency.setTargetAtTime(v.f * p.ratio, t, .01);
+    vp.osc.detune.setTargetAtTime(p.detune, t, .01);
+    vp.lv.gain.setTargetAtTime(effLevel(p, v.f), t, .015);
+  }
+}
+
+/* ---------- note input ---------- */
+const held = new Set(), sustained = new Set(), codeHeld = new Map(), ptrNote = new Map();
+function keyDown(m) { held.add(m); sustained.delete(m); noteOn(m); refreshKeys(); }
+function keyUp(m) {
+  held.delete(m);
+  if (state.hold) sustained.add(m);
+  else { const v = active.get(m); if (v) releaseVoice(v); }
+  refreshKeys();
+}
+function setHold(on) {
+  state.hold = on;
+  holdBtn.setAttribute('aria-pressed', on);
+  if (!on) { for (const m of sustained) if (!held.has(m)) { const v = active.get(m); if (v) releaseVoice(v); } sustained.clear(); }
+  refreshKeys();
+}
+function panic(r) {
+  if (ctx) for (const v of [...voices]) releaseVoice(v, r);
+  held.clear(); sustained.clear(); codeHeld.clear(); ptrNote.clear();
+  stopDemo(); setDroneUI(false);
+  refreshKeys();
+}
+function releaseInputs() {
+  for (const m of codeHeld.values()) keyUp(m);
+  codeHeld.clear();
+  for (const m of ptrNote.values()) if (m != null) keyUp(m);
+  ptrNote.clear();
+}
+
+/* ---------- DOM refs ---------- */
+const presetSel = $('#preset'), genList = $('#genList'), addBtn = $('#addP'), gCount = $('#gCount');
+const cvWave = $('#cvWave'), cvHarm = $('#cvHarm'), cvScope = $('#cvScope'), cvEnv = $('#cvEnv'), cvEq = $('#cvEq');
+const audioBtn = $('#audioBtn'), audioState = $('#audioState'), vol = $('#vol'), volOut = $('#volOut');
+const meter = $('#meter'), meterBar = $('#meterBar'), meterPeak = $('#meterPeak');
+const envTabs = [...document.querySelectorAll('.envtabs button')], envKnobs = $('#envKnobs'), envUse = $('#envUse');
+const envIn = { a: $('#env-a'), d: $('#env-d'), s: $('#env-s'), r: $('#env-r') };
+const envOut = { a: $('#o-a'), d: $('#o-d'), s: $('#o-s'), r: $('#o-r') };
+const chips = $('#chips'), bType = $('#bType'), bFreq = $('#bFreq'), bGain = $('#bGain'), bQ = $('#bQ'), bTitle = $('#bTitle');
+const oFreq = $('#o-freq'), oGain = $('#o-gain'), oQ = $('#o-q'), eqBypassBtn = $('#eqBypass');
+const kb = $('#kb'), octOut = $('#octOut'), holdBtn = $('#holdBtn'), voiceCount = $('#voiceCount');
+
+function updateAudioUI() {
+  const st = ctx ? ctx.state : 'off';
+  const on = st === 'running';
+  audioBtn.textContent = on ? '소리 끄기' : '소리 켜기';
+  audioBtn.classList.toggle('primary', !on);
+  audioState.textContent = on ? `켜짐 · ${(ctx.sampleRate / 1000).toFixed(1)} kHz` : st === 'suspended' ? '일시정지' : '꺼짐';
+  audioState.classList.toggle('on', on);
+  dirty.scope = dirty.eq = true;
+}
+function updateVoiceCount() { voiceCount.textContent = `보이스 ${voices.filter(v => v.tRel === null).length}`; }
+
+/* ---------- generators UI ---------- */
+function rowHTML(p, i) {
+  const n = i + 1, lv = Math.round(p.level * 100);
+  return `<div class="grow${p.on ? '' : ' off'}" data-id="${p.id}" style="--h:${hueOf(i)}">
+  <button class="sw" type="button" data-act="toggle" aria-pressed="${p.on}" aria-label="사인 ${n} 켜기/끄기">${n}</button>
+  <div class="ratio"><button class="mini" type="button" data-act="rdown" aria-label="사인 ${n} 배율 내리기">−</button><input id="r-${p.id}" type="number" inputmode="decimal" min="0.01" max="64" step="0.01" value="${fmtRatio(p.ratio)}" data-act="ratio" aria-label="사인 ${n} 배율"><button class="mini" type="button" data-act="rup" aria-label="사인 ${n} 배율 올리기">+</button></div>
+  <label class="cell c-lv"><span class="cl">레벨</span><input id="l-${p.id}" type="range" min="0" max="100" step="1" value="${lv}" data-act="level" aria-label="사인 ${n} 레벨"><output>${fmtLevel(p.level)}</output></label>
+  <label class="cell c-dt"><span class="cl">디튠</span><input id="d-${p.id}" class="bi" type="range" min="-100" max="100" step="1" value="${p.detune}" data-act="detune" aria-label="사인 ${n} 디튠 (센트)"><output>${fmtCents(p.detune)}</output></label>
+  <label class="cell c-ph"><span class="cl">위상</span><input id="p-${p.id}" type="range" min="0" max="355" step="5" value="${p.phase}" data-act="phase" aria-label="사인 ${n} 위상"><output>${p.phase}°</output></label>
+  <div class="seg envsel" role="group" aria-label="사인 ${n} 엔벨로프"><button type="button" data-act="env" data-env="A" aria-pressed="${p.env === 'A'}">A</button><button type="button" data-act="env" data-env="B" aria-pressed="${p.env === 'B'}">B</button></div>
+  <button class="del" type="button" data-act="del" aria-label="사인 ${n} 삭제"${state.partials.length <= 1 ? ' disabled' : ''}>×</button>
+</div>`;
+}
+function renderGenerators() {
+  genList.innerHTML = state.partials.map(rowHTML).join('');
+  genList.querySelectorAll('input[type=range]').forEach(paintRange);
+  gCount.textContent = `${state.partials.length} / ${MAX_P}`;
+  addBtn.disabled = state.partials.length >= MAX_P;
+  updateEnvUse();
+  dirty.wave = dirty.harm = true;
+}
+function partialsChanged() { markCustom(); dirty.wave = dirty.harm = true; save(); }
+function markCustom() { if (state.preset !== 'custom') { state.preset = 'custom'; presetSel.value = 'custom'; } }
+
+genList.addEventListener('input', (e) => {
+  const t = e.target, row = t.closest('.grow'); if (!row) return;
+  const p = findP(+row.dataset.id); if (!p) return;
+  const out = t.nextElementSibling;
+  switch (t.dataset.act) {
+    case 'level': p.level = +t.value / 100; out.textContent = `${t.value}%`; paintRange(t); liveLevels(); break;
+    case 'detune': p.detune = +t.value; out.textContent = fmtCents(p.detune); paintRange(t); liveFreq(p); break;
+    case 'phase': p.phase = +t.value; out.textContent = `${p.phase}°`; paintRange(t); break;
+    case 'ratio': { const v = parseFloat(t.value); if (!(v > 0)) return; p.ratio = clamp(v, .01, 64); liveFreq(p); break; }
+    default: return;
+  }
+  partialsChanged();
+});
+genList.addEventListener('change', (e) => {
+  const t = e.target; if (t.dataset.act !== 'ratio') return;
+  const p = findP(+t.closest('.grow').dataset.id); if (p) t.value = fmtRatio(p.ratio);
+});
+genList.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const row = b.closest('.grow'), p = findP(+row.dataset.id); if (!p) return;
+  switch (b.dataset.act) {
+    case 'toggle': p.on = !p.on; b.setAttribute('aria-pressed', p.on); row.classList.toggle('off', !p.on); liveLevels(); break;
+    case 'rdown': p.ratio = p.ratio > 1 ? Math.ceil(p.ratio - 1e-9) - 1 : Math.max(.125, +(p.ratio / 2).toFixed(4)); row.querySelector('input[type=number]').value = fmtRatio(p.ratio); liveFreq(p); break;
+    case 'rup': p.ratio = Math.min(64, p.ratio < 1 ? Math.min(1, p.ratio * 2) : Math.floor(p.ratio + 1e-9) + 1); row.querySelector('input[type=number]').value = fmtRatio(p.ratio); liveFreq(p); break;
+    case 'env': p.env = b.dataset.env; row.querySelectorAll('[data-act=env]').forEach(x => x.setAttribute('aria-pressed', x === b)); updateEnvUse(); break;
+    case 'del': {
+      if (state.partials.length <= 1) return;
+      state.partials = state.partials.filter(x => x !== p);
+      if (ctx) for (const v of voices) for (const vp of v.parts) if (vp.pid === p.id) vp.lv.gain.setTargetAtTime(0, ctx.currentTime, .01);
+      liveLevels(); renderGenerators(); break;
+    }
+    default: return;
+  }
+  partialsChanged();
+});
+addBtn.addEventListener('click', () => addPartial());
+function addPartial(ratio, level) {
+  if (state.partials.length >= MAX_P) return;
+  if (ratio === undefined) { const maxR = state.partials.reduce((m, p) => Math.max(m, p.ratio), 0); ratio = Math.min(64, Math.floor(maxR) + 1); }
+  state.partials.push(makePartial({ ratio, level: level === undefined ? .5 : level }));
+  renderGenerators(); partialsChanged();
+}
+function setPartialLevel(p, level) {
+  p.level = Math.round(clamp(level, 0, 1) * 100) / 100;
+  const inp = document.getElementById('l-' + p.id);
+  if (inp) { inp.value = Math.round(p.level * 100); inp.nextElementSibling.textContent = fmtLevel(p.level); paintRange(inp); }
+  liveLevels(); partialsChanged();
+}
+function loadPreset(key) {
+  const pr = PRESETS[key]; if (!pr) return;
+  panic(.05);
+  state.preset = key;
+  state.partials = pr.partials.map(makePartial);
+  state.envs = { A: { ...pr.envs.A }, B: { ...pr.envs.B } };
+  presetSel.value = key;
+  lab.linked = null; updateLabStatus();
+  renderGenerators(); syncEnvUI(); save();
+}
+
+/* ---------- envelope UI ---------- */
+function updateEnvUse() {
+  const list = state.partials.map((p, i) => p.env === state.envTab ? i + 1 : 0).filter(Boolean);
+  envUse.textContent = list.length
+    ? `Env ${state.envTab}를 쓰는 사인: ${list.join(', ')}`
+    : `Env ${state.envTab}를 쓰는 사인이 없습니다. 사인 행의 A/B 버튼으로 연결하세요.`;
+}
+function syncEnvUI() {
+  const e = state.envs[state.envTab];
+  envTabs.forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === state.envTab));
+  for (const k of ['a', 'd', 'r']) { envIn[k].value = toLog(e[k], T_MIN, ENV_MAX[k]); envOut[k].textContent = fmtTime(e[k]); }
+  envIn.s.value = Math.round(e.s * 100); envOut.s.textContent = `${Math.round(e.s * 100)}%`;
+  envKnobs.style.setProperty('--accent', state.envTab === 'A' ? 'var(--env-a)' : 'var(--env-b)');
+  Object.values(envIn).forEach(paintRange);
+  updateEnvUse();
+  dirty.env = true;
+}
+envTabs.forEach(b => b.addEventListener('click', () => { state.envTab = b.dataset.tab; syncEnvUI(); }));
+for (const k of ['a', 'd', 's', 'r']) {
+  envIn[k].addEventListener('input', () => {
+    const e = state.envs[state.envTab];
+    if (k === 's') e.s = +envIn.s.value / 100;
+    else e[k] = round3(fromLog(+envIn[k].value, T_MIN, ENV_MAX[k]));
+    envOut[k].textContent = k === 's' ? `${Math.round(e.s * 100)}%` : fmtTime(e[k]);
+    paintRange(envIn[k]);
+    dirty.env = true; markCustom(); save();
+  });
+}
+
+/* ---------- EQ UI ---------- */
+function buildEqUI() {
+  bType.innerHTML = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join('');
+  chips.innerHTML = state.eq.map((b, i) => `<div class="chip" data-bi="${i}"><button class="dot" type="button" data-act="on"></button><button class="cm" type="button" data-act="sel"><span></span><small></small></button></div>`).join('');
+}
+function updateChips() {
+  chips.querySelectorAll('.chip').forEach((el, i) => {
+    const b = state.eq[i];
+    el.setAttribute('aria-current', i === state.band ? 'true' : 'false');
+    el.classList.toggle('off', !b.on);
+    const dot = el.querySelector('.dot');
+    dot.setAttribute('aria-pressed', b.on);
+    dot.setAttribute('aria-label', `밴드 ${i + 1} 켜기/끄기`);
+    el.querySelector('.cm span').textContent = `${i + 1} ${TYPES[b.type].label}`;
+    el.querySelector('.cm small').textContent = fmtFreq(b.freq);
+  });
+}
+function syncBandUI() {
+  const b = state.eq[state.band], T = TYPES[b.type];
+  bTitle.textContent = `밴드 ${state.band + 1} 유형`;
+  bType.value = b.type;
+  bFreq.value = toLog(b.freq, EQ_MIN, EQ_MAX); oFreq.textContent = fmtFreq(b.freq);
+  bGain.value = b.gain; bGain.disabled = !T.gain; oGain.textContent = T.gain ? fmtDb(b.gain) : '—';
+  bQ.value = toLog(b.q, Q_MIN, Q_MAX); bQ.disabled = !T.q; oQ.textContent = T.q ? b.q.toFixed(2) : '—';
+  [bFreq, bGain, bQ].forEach(paintRange);
+  eqBypassBtn.setAttribute('aria-pressed', state.eqBypass);
+  updateChips();
+}
+function bandChanged(i) {
+  applyLive(i === undefined ? state.band : i);
+  syncBandUI();
+  dirty.eq = dirty.resp = true; save();
+}
+chips.addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  const bi = +btn.closest('.chip').dataset.bi;
+  if (btn.dataset.act === 'on') state.eq[bi].on = !state.eq[bi].on;
+  state.band = bi; bandChanged(bi);
+});
+bType.addEventListener('change', () => { state.eq[state.band].type = bType.value; bandChanged(); });
+bFreq.addEventListener('input', () => { state.eq[state.band].freq = Math.round(fromLog(+bFreq.value, EQ_MIN, EQ_MAX)); bandChanged(); });
+bGain.addEventListener('input', () => { state.eq[state.band].gain = +bGain.value; bandChanged(); });
+bQ.addEventListener('input', () => { state.eq[state.band].q = fromLog(+bQ.value, Q_MIN, Q_MAX); bandChanged(); });
+eqBypassBtn.addEventListener('click', () => { state.eqBypass = !state.eqBypass; state.eq.forEach((_, i) => applyLive(i)); syncBandUI(); dirty.eq = dirty.resp = true; save(); });
+$('#eqFlat').addEventListener('click', () => {
+  state.eq = DEFAULT_EQ().map(b => ({ ...b, gain: 0, on: b.type !== 'highpass' && b.type !== 'lowpass' }));
+  state.eqBypass = false;
+  state.eq.forEach((_, i) => applyLive(i));
+  syncBandUI(); dirty.eq = dirty.resp = true; save();
+});
+
+/* ---------- canvas helpers ---------- */
+function setupCanvas(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), r = cv.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { c, W: r.width, H: r.height };
+}
+const hline = (c, x1, x2, y) => { y = Math.round(y) + .5; c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke(); };
+const vline = (c, x, y1, y2) => { x = Math.round(x) + .5; c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke(); };
+const pos = (e, cv) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, W: r.width, H: r.height }; };
+
+/* ---------- waveform preview ---------- */
+function drawWave() {
+  dirty.wave = false;
+  const { c, W, H } = setupCanvas(cvWave), mid = H / 2;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line;
+  vline(c, W / 2, 0, H); hline(c, 0, W, H * .15); hline(c, 0, W, H * .85);
+  c.strokeStyle = TH.line2; hline(c, 0, W, mid);
+  c.font = `11px ${TH.body}`; c.fillStyle = TH.dim;
+  const act = [];
+  state.partials.forEach((p, i) => { if (p.on && p.level > 0) act.push({ p, i }); });
+  if (!act.length) { c.textAlign = 'center'; c.fillText('켜진 사인이 없습니다', W / 2, mid - 10); return; }
+  const N = Math.max(160, Math.round(W)), sum = new Float32Array(N + 1);
+  const comps = act.map(({ p }) => {
+    const a = new Float32Array(N + 1), ph = p.phase * Math.PI / 180;
+    for (let j = 0; j <= N; j++) { a[j] = p.level * Math.sin(TAU * p.ratio * (2 * j / N) + ph); sum[j] += a[j]; }
+    return a;
+  });
+  let peak = 0; for (const v of sum) peak = Math.max(peak, Math.abs(v));
+  const sc = peak > 1e-6 ? (mid * .8) / peak : 0;
+  const plot = (arr) => { c.beginPath(); for (let j = 0; j <= N; j++) { const x = j / N * W, y = mid - arr[j] * sc; j ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); };
+  c.lineWidth = 1; c.globalAlpha = .5;
+  comps.forEach((a, k) => { c.strokeStyle = screenColor(act[k].i); plot(a); });
+  c.globalAlpha = 1; c.lineWidth = 2.2; c.lineJoin = 'round'; c.strokeStyle = TH.trace; plot(sum);
+  c.fillStyle = TH.dim; c.textAlign = 'left'; c.fillText('1주기', W / 2 + 6, H - 7);
+}
+
+/* ---------- harmonic map ---------- */
+let harmDrag = -1, harmHover = -1;
+function harmLayout(W, H) {
+  const L = 38, R = 12, Tp = 14, B = 20, w = W - L - R, h = H - Tp - B;
+  const maxR = ghostTargets().reduce((m, [r]) => Math.max(m, r), state.partials.reduce((m, p) => Math.max(m, p.ratio), 0));
+  const xMax = Math.max(8, Math.ceil(maxR + .5));
+  return { L, Tp, w, h, xMax, x: (r) => L + (r / xMax) * w, y: (v) => Tp + (1 - v) * h, r: (x) => (x - L) / w * xMax, v: (y) => clamp(1 - (y - Tp) / h, 0, 1) };
+}
+function stickPositions(L) {
+  const groups = new Map();
+  state.partials.forEach((p, i) => { const k = p.ratio.toFixed(3); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); });
+  return state.partials.map((p, i) => {
+    const g = groups.get(p.ratio.toFixed(3)), off = (g.indexOf(i) - (g.length - 1) / 2) * 8;
+    return { p, i, x: L.x(p.ratio) + off, y: L.y(p.level) };
+  });
+}
+function drawHarm() {
+  dirty.harm = false;
+  const { c, W, H } = setupCanvas(cvHarm), L = harmLayout(W, H);
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.font = `10px ${TH.mono}`; c.lineWidth = 1;
+  for (const v of [.5, 1]) { c.strokeStyle = TH.line; hline(c, L.L, L.L + L.w, L.y(v)); c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText(`${v * 100}%`, L.L - 6, L.y(v) + 3); }
+  const step = L.xMax <= 12 ? 1 : L.xMax <= 24 ? 2 : 4;
+  c.textAlign = 'center';
+  for (let k = step; k <= L.xMax; k += step) { const x = L.x(k); c.strokeStyle = TH.line; vline(c, x, L.Tp, L.y(0)); c.fillStyle = TH.dim; c.fillText(String(k), x, H - 6); }
+  c.textAlign = 'right'; c.fillText('×f', L.L - 6, H - 6);
+  c.strokeStyle = TH.line2; hline(c, L.L, L.L + L.w, L.y(0));
+  const ghosts = ghostTargets();
+  if (ghosts.length) {
+    c.strokeStyle = TH.envB; c.lineWidth = 1.5;
+    for (const [r, a] of ghosts) {
+      const x = L.x(r), y = L.y(a);
+      c.setLineDash([2, 3]); c.beginPath(); c.moveTo(x, L.y(0)); c.lineTo(x, y + 7); c.stroke(); c.setLineDash([]);
+      c.beginPath(); c.arc(x, y, 7, 0, TAU); c.stroke();
+    }
+    c.font = `11px ${TH.body}`; c.fillStyle = TH.envB; c.textAlign = 'right'; c.fillText('○ 미션 목표', W - 12, L.Tp + 4);
+  }
+  const sticks = stickPositions(L), focus = harmDrag >= 0 ? harmDrag : harmHover;
+  c.lineCap = 'round';
+  for (const s of sticks) {
+    const col = screenColor(s.i);
+    c.globalAlpha = s.p.on ? 1 : .35; c.strokeStyle = col; c.lineWidth = 3;
+    if (!s.p.on) c.setLineDash([3, 4]);
+    c.beginPath(); c.moveTo(s.x, L.y(0)); c.lineTo(s.x, s.y); c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.arc(s.x, s.y, s.i === focus ? 6 : 4.5, 0, TAU); c.fillStyle = col; c.fill();
+  }
+  c.globalAlpha = 1; c.lineCap = 'butt';
+  const s = sticks[focus];
+  if (s) {
+    const txt = `${s.i + 1} · ×${fmtRatio(s.p.ratio)} · ${fmtLevel(s.p.level)}`;
+    c.font = `500 11px ${TH.mono}`;
+    const tw = c.measureText(txt).width, tx = clamp(s.x, L.L + tw / 2, W - tw / 2 - 6), ty = s.y < 32 ? s.y + 20 : s.y - 12;
+    c.fillStyle = TH.ink; c.textAlign = 'center'; c.fillText(txt, tx, ty);
+  }
+}
+function harmHit(x, y, W, H) {
+  const sticks = stickPositions(harmLayout(W, H));
+  let best = -1, bd = Infinity;
+  for (const s of sticks) {
+    const dx = Math.abs(s.x - x); if (dx > 10) continue;
+    const d = dx + Math.abs(s.y - y) * .15;
+    if (d < bd) { bd = d; best = s.i; }
+  }
+  return best;
+}
+cvHarm.addEventListener('pointerdown', (e) => {
+  const p = pos(e, cvHarm), hit = harmHit(p.x, p.y, p.W, p.H);
+  if (hit < 0) return;
+  e.preventDefault(); harmDrag = hit; cvHarm.setPointerCapture(e.pointerId);
+  setPartialLevel(state.partials[hit], harmLayout(p.W, p.H).v(p.y));
+});
+cvHarm.addEventListener('pointermove', (e) => {
+  const p = pos(e, cvHarm);
+  if (harmDrag >= 0) { const part = state.partials[harmDrag]; if (part) setPartialLevel(part, harmLayout(p.W, p.H).v(p.y)); return; }
+  const hit = harmHit(p.x, p.y, p.W, p.H);
+  if (hit !== harmHover) { harmHover = hit; dirty.harm = true; }
+  cvHarm.style.cursor = hit >= 0 ? 'ns-resize' : 'crosshair';
+});
+const endHarm = () => { harmDrag = -1; dirty.harm = true; };
+cvHarm.addEventListener('pointerup', endHarm);
+cvHarm.addEventListener('pointercancel', endHarm);
+cvHarm.addEventListener('pointerleave', () => { if (harmDrag < 0 && harmHover >= 0) { harmHover = -1; dirty.harm = true; } });
+cvHarm.addEventListener('dblclick', (e) => {
+  const p = pos(e, cvHarm);
+  if (harmHit(p.x, p.y, p.W, p.H) >= 0 || state.partials.length >= MAX_P) return;
+  const L = harmLayout(p.W, p.H);
+  let r = L.r(p.x);
+  r = Math.abs(r - Math.round(r)) < .12 ? Math.round(r) : Math.round(r * 20) / 20;
+  if (r <= 0) return;
+  addPartial(clamp(r, .05, 64), Math.max(.05, Math.round(L.v(p.y) * 100) / 100));
+});
+
+/* ---------- envelope canvas ---------- */
+let envDrag = -1, envHover = -1;
+function envLayout(W, H) {
+  const L = 14, R = 14, Tp = 16, B = 24, w = W - L - R, h = H - Tp - B, e = state.envs[state.envTab];
+  const sA = w * .26 * Math.sqrt(e.a / ENV_MAX.a), sD = w * .26 * Math.sqrt(e.d / ENV_MAX.d), sH = w * .14, sR = w * .30 * Math.sqrt(e.r / ENV_MAX.r);
+  const x0 = L, x1 = x0 + sA, x2 = x1 + sD, x3 = x2 + sH, x4 = x3 + sR;
+  return { L, Tp, w, h, e, sA, sD, sH, sR, x0, x1, x2, x3, x4, y: (v) => Tp + (1 - v) * h, v: (y) => clamp(1 - (y - Tp) / h, 0, 1) };
+}
+const envHandles = (L) => [{ x: L.x1, y: L.y(1) }, { x: L.x2, y: L.y(L.e.s) }, { x: L.x4, y: L.y(0) }];
+function envPoints(L) {
+  const e = L.e, N = 40, pts = [[L.x0, L.y(0)], [L.x1, L.y(1)]];
+  for (let k = 1; k <= N; k++) { const t = k / N * e.d; pts.push([L.x1 + L.sD * k / N, L.y(e.s + (1 - e.s) * Math.exp(-t / (e.d / 4)))]); }
+  pts.push([L.x3, L.y(e.s)]);
+  for (let k = 1; k <= N; k++) { const t = k / N * e.r; pts.push([L.x3 + L.sR * k / N, L.y(e.s * Math.exp(-t / (e.r / 5)))]); }
+  return pts;
+}
+function playhead(v, L, now) {
+  const k = state.envTab, e = v.envSnap[k];
+  if (v.tRel === null) {
+    const el = now - v.t0; if (el < 0) return null;
+    const x = el < e.a ? L.x0 + L.sA * (el / e.a) : el < e.a + e.d ? L.x1 + L.sD * ((el - e.a) / e.d) : L.x2;
+    return { x, y: L.y(envValue(e, el)) };
+  }
+  const r = v.relR[k], el = now - v.tRel;
+  if (el > r * 1.6) return null;
+  return { x: L.x3 + L.sR * Math.min(1, el / r), y: L.y(v.relVal[k] * Math.exp(-el / (r / 5))) };
+}
+function drawEnv() {
+  dirty.env = false;
+  const { c, W, H } = setupCanvas(cvEnv), L = envLayout(W, H), e = L.e;
+  const col = state.envTab === 'A' ? TH.envA : TH.envB;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.fillStyle = TH.line; c.fillRect(L.x2, L.Tp, L.sH, L.h);
+  c.lineWidth = 1; c.strokeStyle = TH.line;
+  for (const v of [0, .5, 1]) hline(c, L.L, L.L + L.w, L.y(v));
+  c.strokeStyle = TH.line2; c.setLineDash([2, 3]);
+  for (const x of [L.x1, L.x2, L.x3]) vline(c, x, L.Tp, L.Tp + L.h);
+  c.setLineDash([]);
+  const pts = envPoints(L);
+  c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y)); c.lineTo(L.x4, L.y(0)); c.closePath();
+  c.globalAlpha = .16; c.fillStyle = col; c.fill(); c.globalAlpha = 1;
+  c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y));
+  c.strokeStyle = col; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+  c.font = `10px ${TH.mono}`; c.fillStyle = TH.dim; c.textAlign = 'center';
+  const by = H - 8;
+  if (L.sA > 12) c.fillText('A', (L.x0 + L.x1) / 2, by);
+  if (L.sD > 12) c.fillText('D', (L.x1 + L.x2) / 2, by);
+  c.fillText('S', (L.x2 + L.x3) / 2, by);
+  if (L.sR > 12) c.fillText('R', (L.x3 + L.x4) / 2, by);
+  c.font = `11px ${TH.body}`;
+  c.fillText('누르는 동안', (L.x2 + L.x3) / 2, e.s > .75 ? L.Tp + L.h - 8 : L.Tp + 12);
+  envHandles(L).forEach((hd, k) => {
+    c.beginPath(); c.arc(hd.x, hd.y, 6, 0, TAU);
+    c.fillStyle = (envDrag === k || envHover === k) ? col : TH.screen; c.fill();
+    c.strokeStyle = col; c.lineWidth = 2; c.stroke();
+  });
+  if (ctx) {
+    const now = ctx.currentTime;
+    c.fillStyle = TH.trace;
+    for (const v of voices) { const p = playhead(v, L, now); if (!p) continue; c.beginPath(); c.arc(p.x, p.y, 3.5, 0, TAU); c.fill(); }
+  }
+}
+function envHit(x, y, W, H) {
+  let best = -1, bd = 16;
+  envHandles(envLayout(W, H)).forEach((h, k) => { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = k; } });
+  return best;
+}
+cvEnv.addEventListener('pointerdown', (e) => {
+  const p = pos(e, cvEnv), hit = envHit(p.x, p.y, p.W, p.H);
+  if (hit < 0) return;
+  e.preventDefault(); envDrag = hit; cvEnv.setPointerCapture(e.pointerId); dirty.env = true;
+});
+cvEnv.addEventListener('pointermove', (e) => {
+  const p = pos(e, cvEnv);
+  if (envDrag < 0) {
+    const hit = envHit(p.x, p.y, p.W, p.H);
+    if (hit !== envHover) { envHover = hit; dirty.env = true; }
+    cvEnv.style.cursor = hit < 0 ? 'default' : hit === 1 ? 'move' : 'ew-resize';
+    return;
+  }
+  const L = envLayout(p.W, p.H), e2 = state.envs[state.envTab];
+  const time = (dx, frac, max) => clamp(max * Math.pow(Math.max(0, dx) / (L.w * frac), 2), T_MIN, max);
+  if (envDrag === 0) e2.a = round3(time(p.x - L.x0, .26, ENV_MAX.a));
+  else if (envDrag === 1) { e2.d = round3(time(p.x - L.x1, .26, ENV_MAX.d)); e2.s = Math.round(L.v(p.y) * 100) / 100; }
+  else e2.r = round3(time(p.x - L.x3, .30, ENV_MAX.r));
+  syncEnvUI(); markCustom(); save();
+});
+const endEnv = () => { envDrag = -1; dirty.env = true; };
+cvEnv.addEventListener('pointerup', endEnv);
+cvEnv.addEventListener('pointercancel', endEnv);
+cvEnv.addEventListener('pointerleave', () => { if (envDrag < 0 && envHover >= 0) { envHover = -1; dirty.env = true; } });
+
+/* ---------- EQ canvas ---------- */
+let eqDrag = -1, resp = null;
+function eqLayout(W, H) {
+  const L = 34, R = 10, Tp = 10, B = 20, w = W - L - R, h = H - Tp - B, lr = Math.log(EQ_MAX / EQ_MIN);
+  return { L, Tp, w, h,
+    x: (f) => L + Math.log(f / EQ_MIN) / lr * w,
+    f: (x) => EQ_MIN * Math.exp(clamp((x - L) / w, 0, 1) * lr),
+    y: (db) => Tp + (1 - (db + EQ_DB) / (2 * EQ_DB)) * h,
+    db: (y) => clamp((1 - (y - Tp) / h) * 2 * EQ_DB - EQ_DB, -EQ_DB, EQ_DB),
+    sy: (db) => Tp + (1 - (clamp(db, -110, -10) + 110) / 100) * h };
+}
+const nodePos = (b, L) => ({ x: L.x(b.freq), y: TYPES[b.type].gain ? L.y(b.gain) : L.y(0) });
+function computeResp(L) {
+  const n = Math.max(2, Math.round(L.w)), fs = ctx ? ctx.sampleRate : 48000;
+  const freqs = new Float64Array(n);
+  for (let i = 0; i < n; i++) freqs[i] = L.f(L.L + i * L.w / (n - 1));
+  const bands = state.eq.map(b => { const co = biquad(b, fs), db = new Float32Array(n); for (let i = 0; i < n; i++) db[i] = magDb(co, freqs[i], fs); return db; });
+  const total = new Float32Array(n);
+  if (!state.eqBypass) state.eq.forEach((b, bi) => { if (b.on) for (let i = 0; i < n; i++) total[i] += bands[bi][i]; });
+  resp = { n, total, bands, w: L.w };
+}
+function drawSpectrum(c, L, an, buf, filled) {
+  an.getFloatFrequencyData(buf);
+  const binHz = ctx.sampleRate / an.fftSize, n = buf.length;
+  c.beginPath(); c.moveTo(L.L, L.Tp + L.h);
+  for (let x = L.L; x <= L.L + L.w; x += 1.5) {
+    const lo = L.f(x - .75) / binHz, hi = L.f(x + .75) / binHz;
+    let db;
+    if (hi - lo > 1) { db = -200; for (let i = Math.ceil(lo); i <= Math.floor(hi) && i < n; i++) if (buf[i] > db) db = buf[i]; }
+    else { const fi = L.f(x) / binHz, i0 = Math.min(Math.floor(fi), n - 2), fr = fi - i0; db = buf[i0] + (buf[i0 + 1] - buf[i0]) * fr; }
+    if (!Number.isFinite(db)) db = -200;
+    c.lineTo(x, L.sy(db));
+  }
+  c.lineTo(L.L + L.w, L.Tp + L.h);
+  if (filled) { c.closePath(); c.globalAlpha = .26; c.fillStyle = TH.envA; c.fill(); c.globalAlpha = .75; c.strokeStyle = TH.envA; c.lineWidth = 1; c.stroke(); }
+  else { c.globalAlpha = .4; c.strokeStyle = TH.dim; c.lineWidth = 1; c.stroke(); }
+  c.globalAlpha = 1;
+}
+function drawEq() {
+  dirty.eq = false;
+  const { c, W, H } = setupCanvas(cvEq), L = eqLayout(W, H);
+  if (dirty.resp || !resp || resp.w !== L.w) { computeResp(L); dirty.resp = false; }
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.font = `10px ${TH.mono}`; c.lineWidth = 1;
+  for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+    const x = L.x(f);
+    c.strokeStyle = (f === 100 || f === 1000 || f === 10000) ? TH.line2 : TH.line; vline(c, x, L.Tp, L.Tp + L.h);
+    c.fillStyle = TH.dim; c.textAlign = 'center'; c.fillText(f >= 1000 ? `${f / 1000}k` : String(f), x, H - 6);
+  }
+  for (const db of [-12, -6, 0, 6, 12]) {
+    const y = L.y(db);
+    c.strokeStyle = db === 0 ? TH.line2 : TH.line; hline(c, L.L, L.L + L.w, y);
+    c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText(db > 0 ? `+${db}` : minus(String(db)), L.L - 6, y + 3);
+  }
+  const running = ctx && ctx.state === 'running';
+  c.save(); c.beginPath(); c.rect(L.L, L.Tp, L.w, L.h); c.clip();
+  if (running) { drawSpectrum(c, L, anPre, specPre, false); drawSpectrum(c, L, anPost, specPost, true); }
+  const n = resp.n, step = L.w / (n - 1), sb = state.eq[state.band], bandDb = resp.bands[state.band], lim = (d) => clamp(d, -EQ_DB - 8, EQ_DB + 8);
+  c.beginPath(); c.moveTo(L.L, L.y(0));
+  for (let i = 0; i < n; i++) c.lineTo(L.L + i * step, L.y(lim(bandDb[i])));
+  c.lineTo(L.L + L.w, L.y(0)); c.closePath();
+  c.globalAlpha = sb.on && !state.eqBypass ? .22 : .08; c.fillStyle = TH.envB; c.fill(); c.globalAlpha = 1;
+  c.beginPath();
+  for (let i = 0; i < n; i++) { const x = L.L + i * step, y = L.y(lim(resp.total[i])); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.strokeStyle = TH.trace; c.lineWidth = 2;
+  if (state.eqBypass) { c.globalAlpha = .4; c.setLineDash([4, 4]); }
+  c.stroke(); c.setLineDash([]); c.globalAlpha = 1;
+  c.restore();
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `600 10px ${TH.mono}`;
+  state.eq.forEach((b, i) => {
+    const p = nodePos(b, L), sel = i === state.band, on = b.on && !state.eqBypass;
+    c.globalAlpha = on || sel ? 1 : .55;
+    c.beginPath(); c.arc(p.x, p.y, sel ? 10 : 8.5, 0, TAU);
+    c.fillStyle = sel ? TH.envB : TH.screen; c.fill();
+    c.lineWidth = 1.5; c.strokeStyle = sel ? TH.envB : on ? TH.trace : TH.dim; c.stroke();
+    c.fillStyle = sel ? TH.screen : on ? TH.ink : TH.dim; c.fillText(String(i + 1), p.x, p.y + .5);
+  });
+  c.globalAlpha = 1; c.textBaseline = 'alphabetic';
+  if (!running) { c.textAlign = 'right'; c.fillStyle = TH.dim; c.font = `11px ${TH.body}`; c.fillText('소리를 켜면 실시간 스펙트럼이 겹쳐 보입니다', W - 14, L.Tp + 16); }
+}
+function eqHit(x, y, W, H) {
+  const L = eqLayout(W, H); let best = -1, bd = 16;
+  state.eq.forEach((b, i) => { const p = nodePos(b, L), d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+cvEq.addEventListener('pointerdown', (e) => {
+  const p = pos(e, cvEq), hit = eqHit(p.x, p.y, p.W, p.H);
+  if (hit < 0) return;
+  e.preventDefault(); eqDrag = hit; state.band = hit; cvEq.setPointerCapture(e.pointerId); cvEq.style.cursor = 'grabbing';
+  syncBandUI(); dirty.eq = true;
+});
+cvEq.addEventListener('pointermove', (e) => {
+  const p = pos(e, cvEq);
+  if (eqDrag < 0) { cvEq.style.cursor = eqHit(p.x, p.y, p.W, p.H) >= 0 ? 'grab' : 'default'; return; }
+  const L = eqLayout(p.W, p.H), b = state.eq[eqDrag];
+  b.freq = Math.round(clamp(L.f(p.x), EQ_MIN, EQ_MAX));
+  if (TYPES[b.type].gain) b.gain = Math.round(L.db(p.y) * 10) / 10;
+  bandChanged(eqDrag);
+});
+const endEq = () => { if (eqDrag >= 0) { eqDrag = -1; cvEq.style.cursor = 'grab'; } };
+cvEq.addEventListener('pointerup', endEq);
+cvEq.addEventListener('pointercancel', endEq);
+cvEq.addEventListener('wheel', (e) => {
+  const p = pos(e, cvEq), hit = eqHit(p.x, p.y, p.W, p.H);
+  if (hit < 0 || !TYPES[state.eq[hit].type].q) return;
+  e.preventDefault();
+  const b = state.eq[hit];
+  b.q = clamp(b.q * Math.exp(-e.deltaY * .0015), Q_MIN, Q_MAX);
+  state.band = hit; bandChanged(hit);
+}, { passive: false });
+cvEq.addEventListener('dblclick', (e) => {
+  const p = pos(e, cvEq), hit = eqHit(p.x, p.y, p.W, p.H);
+  if (hit < 0) return;
+  state.eq[hit].on = !state.eq[hit].on; state.band = hit; bandChanged(hit);
+});
+
+/* ---------- oscilloscope + meter ---------- */
+let scopeGain = 4, meterHold = 0, clipUntil = 0;
+function setMeter(peak) {
+  const db = peak > 0 ? 20 * Math.log10(peak) : -100, pct = clamp((db + 48) / 48, 0, 1);
+  meterHold = Math.max(pct, meterHold - .006);
+  meterBar.style.transform = `scaleX(${pct.toFixed(3)})`;
+  meterPeak.style.left = `calc(${(meterHold * 100).toFixed(1)}% - 2px)`;
+  const now = performance.now();
+  if (peak >= .99) clipUntil = now + 700;
+  meter.classList.toggle('clip', now < clipUntil);
+}
+function drawScope() {
+  dirty.scope = false;
+  const { c, W, H } = setupCanvas(cvScope), mid = H / 2;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.strokeStyle = TH.line; c.lineWidth = 1;
+  for (let k = 1; k < 4; k++) vline(c, W * k / 4, 0, H);
+  hline(c, 0, W, H / 4); hline(c, 0, W, H * 3 / 4);
+  c.strokeStyle = TH.line2; hline(c, 0, W, mid);
+  c.font = `11px ${TH.body}`; c.fillStyle = TH.dim; c.textAlign = 'center';
+  if (!ctx || ctx.state !== 'running') { c.fillText('소리를 켜면 출력 파형이 여기에 그려집니다', W / 2, mid - 10); setMeter(0); return; }
+  anScope.getFloatTimeDomainData(scopeBuf);
+  let peak = 0;
+  for (let i = 0; i < scopeBuf.length; i++) { const a = Math.abs(scopeBuf[i]); if (a > peak) peak = a; }
+  setMeter(peak);
+  if (peak < 1e-4) { c.fillText('무음 · 건반을 눌러 보세요', W / 2, mid - 10); return; }
+  let start = 0;
+  const half = scopeBuf.length >> 1;
+  for (let i = 1; i < half; i++) if (scopeBuf[i - 1] < 0 && scopeBuf[i] >= 0) { start = i; break; }
+  const span = Math.min(scopeBuf.length - start, Math.round(ctx.sampleRate * .02));
+  scopeGain += (clamp(.85 / peak, 1, 60) - scopeGain) * .12;
+  c.beginPath();
+  for (let j = 0; j < span; j++) { const x = j / (span - 1) * W, y = mid - scopeBuf[start + j] * scopeGain * mid; j ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.strokeStyle = TH.trace; c.lineWidth = 1.6; c.lineJoin = 'round'; c.stroke();
+  c.fillStyle = TH.dim; c.textAlign = 'left'; c.fillText('20 ms', 8, 14);
+  c.textAlign = 'right'; c.fillText(`확대 ×${scopeGain.toFixed(1)}`, W - 8, 14);
+}
+
+/* ---------- keyboard ---------- */
+const isBlack = (m) => [1, 3, 6, 8, 10].includes(m % 12);
+function keyHTML(n, cls, style) {
+  const off = n - 12 * (state.octave + 1);
+  const letter = off >= 0 && off < KEY_LETTERS.length ? KEY_LETTERS[off] : '';
+  const name = n % 12 === 0 ? `C${n / 12 - 1}` : '';
+  return `<div class="key ${cls}" data-midi="${n}"${style ? ` style="${style}"` : ''}>${letter ? `<span class="kl">${letter}</span>` : ''}${name ? `<span class="nl">${name}</span>` : ''}</div>`;
+}
+let kbWidth = 0;
+function renderKeyboard() {
+  const W = kb.clientWidth; kbWidth = W;
+  if (!W) return;
+  const fit = clamp(Math.floor(W / 38), 7, 22);
+  const start = clamp(12 * ((fit >= 22 ? state.octave - 1 : state.octave) + 1), 12, 96);
+  const whites = [], blacks = [];
+  for (let m = start; whites.length < fit; m++) (isBlack(m) ? blacks : whites).push(m);
+  const gap = 2, pad = 2, ww = (W - pad * 2 - gap * (fit - 1)) / fit, bw = Math.max(16, ww * .6);
+  let html = whites.map(n => keyHTML(n, 'kw', '')).join('');
+  for (const n of blacks) {
+    const wi = whites.indexOf(n - 1);
+    const left = pad + (wi + 1) * (ww + gap) - gap / 2 - bw / 2;
+    html += keyHTML(n, 'kbk', `left:${left.toFixed(1)}px;width:${bw.toFixed(1)}px`);
+  }
+  kb.innerHTML = html;
+  refreshKeys();
+}
+function refreshKeys() {
+  kb.querySelectorAll('.key').forEach(el => {
+    const m = +el.dataset.midi;
+    el.classList.toggle('down', held.has(m));
+    el.classList.toggle('latched', sustained.has(m));
+  });
+}
+function shiftOctave(d) {
+  const o = clamp(state.octave + d, 1, 7);
+  if (o === state.octave) return;
+  state.octave = o; octOut.textContent = `C${o}`;
+  renderKeyboard(); save();
+}
+const keyAt = (x, y) => { const el = document.elementFromPoint(x, y); const k = el && el.closest ? el.closest('.key') : null; return k && kb.contains(k) ? +k.dataset.midi : null; };
+kb.addEventListener('pointerdown', (e) => {
+  const k = e.target.closest('.key'); if (!k) return;
+  e.preventDefault();
+  kb.setPointerCapture(e.pointerId);
+  const m = +k.dataset.midi; ptrNote.set(e.pointerId, m); keyDown(m);
+});
+kb.addEventListener('pointermove', (e) => {
+  if (!ptrNote.has(e.pointerId)) return;
+  const m = keyAt(e.clientX, e.clientY), cur = ptrNote.get(e.pointerId);
+  if (m === cur) return;
+  if (cur != null) keyUp(cur);
+  if (m != null) keyDown(m);
+  ptrNote.set(e.pointerId, m);
+});
+const endPtr = (e) => { if (!ptrNote.has(e.pointerId)) return; const cur = ptrNote.get(e.pointerId); ptrNote.delete(e.pointerId); if (cur != null) keyUp(cur); };
+kb.addEventListener('pointerup', endPtr);
+kb.addEventListener('pointercancel', endPtr);
+kb.addEventListener('contextmenu', (e) => e.preventDefault());
+
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target, tag = t.tagName;
+  if ((tag === 'INPUT' && t.type !== 'range') || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable) return;
+  if (e.code === 'KeyZ' || e.code === 'KeyX') { e.preventDefault(); if (!e.repeat) shiftOctave(e.code === 'KeyZ' ? -1 : 1); return; }
+  if (!(e.code in CODE_MAP)) return;
+  e.preventDefault();
+  if (e.repeat || codeHeld.has(e.code)) return;
+  const m = 12 * (state.octave + 1) + CODE_MAP[e.code];
+  codeHeld.set(e.code, m); keyDown(m);
+});
+window.addEventListener('keyup', (e) => {
+  if (!codeHeld.has(e.code)) return;
+  const m = codeHeld.get(e.code); codeHeld.delete(e.code); keyUp(m);
+});
+window.addEventListener('blur', releaseInputs);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseInputs(); });
+
+$('#octDown').addEventListener('click', () => shiftOctave(-1));
+$('#octUp').addEventListener('click', () => shiftOctave(1));
+holdBtn.addEventListener('click', () => setHold(!state.hold));
+$('#panicBtn').addEventListener('click', () => panic(.04));
+
+/* ---------- header controls ---------- */
+presetSel.innerHTML = Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${p.name}</option>`).join('') + '<option value="custom" disabled>직접 편집한 소리</option>';
+presetSel.addEventListener('change', () => loadPreset(presetSel.value));
+vol.addEventListener('input', () => {
+  state.master = +vol.value; volOut.textContent = fmtVol(state.master); paintRange(vol);
+  if (ctx) masterGain.gain.setTargetAtTime(volGain(state.master), ctx.currentTime, .02);
+  save();
+});
+audioBtn.addEventListener('click', () => {
+  if (!ctx) { ensureAudio(); return; }
+  if (ctx.state === 'running') { panic(.03); ctx.suspend(); } else ctx.resume();
+});
+
+/* ---------- Fourier lab ---------- */
+const LAB_MAX = 32, DRONE = 60;
+// Partial sums of these recipes converge to target(x), x in radians of the fundamental
+const SHAPES = {
+  saw: { use: () => true, amp: (n) => 1 / n, phase: (n) => n % 2 ? 0 : 180, peak: Math.PI / 2, jump: Math.PI,
+    target: (x) => { let u = (x / TAU) % 1; if (u < 0) u += 1; if (u >= .5) u -= 1; return Math.PI * u; } },
+  square: { use: (n) => n % 2 === 1, amp: (n) => 1 / n, phase: () => 0, peak: Math.PI / 4, jump: Math.PI / 2,
+    target: (x) => Math.PI / 4 * Math.sign(Math.sin(x)) },
+  tri: { use: (n) => n % 2 === 1, amp: (n) => 1 / (n * n), phase: (n) => n % 4 === 1 ? 0 : 180, peak: Math.PI * Math.PI / 8, jump: 0,
+    target: (x) => Math.PI / 4 * Math.asin(Math.sin(x)) },
+};
+const labBox = $('#labBox'), labPanel = $('#fourier'), labN = $('#labN'), labNOut = $('#labNOut');
+const cvLab = $('#cvLab'), cvStem = $('#cvStem');
+const labCount = $('#labCount'), labErr = $('#labErr'), labGibbs = $('#labGibbs'), labStatus = $('#labStatus');
+const lgLast = $('#lgLast'), lgLastTxt = $('#lgLastTxt');
+const shapeBtns = [...document.querySelectorAll('.shape button')];
+const demoBtn = $('#labDemo'), droneBtn = $('#labDrone'), resetBtn = $('#labReset');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const go = (el) => el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+
+const phaseOf = (n) => lab.phases ? lab.phases.get(n) : SHAPES[lab.shape].phase(n);
+function lastSendable() {
+  const S = SHAPES[lab.shape];
+  let k = 0, last = 1;
+  for (let n = 1; n <= LAB_MAX && k < MAX_P; n++) if (S.use(n)) { k++; last = n; }
+  return last;
+}
+function labCompute(W) {
+  const S = SHAPES[lab.shape], used = [];
+  for (let n = 1; n <= lab.N; n++) if (S.use(n)) used.push(n);
+  const ph = used.map(n => phaseOf(n) * Math.PI / 180), amp = used.map(n => S.amp(n));
+  const sumAt = (x) => { let s = 0; for (let i = 0; i < used.length; i++) s += amp[i] * Math.sin(used[i] * x + ph[i]); return s; };
+  // metrics over one period; overshoot = largest rise above the target on its positive side
+  const M = 4096;
+  let se = 0, st = 0, md = -Infinity;
+  for (let i = 0; i < M; i++) {
+    const x = TAU * i / M, s = sumAt(x), t = S.target(x);
+    se += (s - t) * (s - t); st += t * t; if (t > 0 && s - t > md) md = s - t;
+  }
+  // display samples over two periods
+  const D = Math.max(240, Math.round(W * 1.5)), li = used.length - 1;
+  const sum = new Float32Array(D + 1), tgt = new Float32Array(D + 1), last = new Float32Array(D + 1);
+  for (let j = 0; j <= D; j++) {
+    const x = 2 * TAU * j / D;
+    sum[j] = sumAt(x); tgt[j] = S.target(x); last[j] = amp[li] * Math.sin(used[li] * x + ph[li]);
+  }
+  return { used, D, sum, tgt, last, err: Math.sqrt(se / st) * 100, over: S.jump ? md / S.jump * 100 : null };
+}
+function drawLab() {
+  dirty.lab = false;
+  const { c, W, H } = setupCanvas(cvLab), S = SHAPES[lab.shape], r = labCompute(W);
+  const Tp = 10, Bt = 18, h = H - Tp - Bt, mid = Tp + h / 2;
+  let peak = S.peak * 1.28;
+  if (lab.phases) for (const v of r.sum) peak = Math.max(peak, Math.abs(v) * 1.05);
+  const sc = (h / 2) / peak;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line;
+  for (let k = 1; k < 8; k++) if (k !== 4) vline(c, W * k / 8, Tp, Tp + h);
+  hline(c, 0, W, mid - S.peak * sc); hline(c, 0, W, mid + S.peak * sc);
+  c.strokeStyle = TH.line2; vline(c, W / 2, Tp, Tp + h); hline(c, 0, W, mid);
+  const plot = (arr) => { c.beginPath(); for (let j = 0; j <= r.D; j++) { const x = j / r.D * W, y = mid - arr[j] * sc; j ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); };
+  c.lineJoin = 'round';
+  c.setLineDash([5, 4]); c.strokeStyle = TH.dim; c.lineWidth = 1.5; plot(r.tgt); c.setLineDash([]);
+  const lastCol = screenColor(r.used.length - 1);
+  if (r.used.length > 1) { c.globalAlpha = .85; c.strokeStyle = lastCol; c.lineWidth = 1.2; plot(r.last); c.globalAlpha = 1; }
+  c.strokeStyle = TH.trace; c.lineWidth = 2.2; plot(r.sum);
+  if (!lab.phases && r.over !== null && r.over > 0) {
+    let jm = 0, best = -Infinity;
+    for (let j = 0; j <= r.D / 2; j++) if (r.tgt[j] > 0 && r.sum[j] - r.tgt[j] > best) { best = r.sum[j] - r.tgt[j]; jm = j; }
+    const x = jm / r.D * W, y = mid - r.sum[jm] * sc, right = x > W - 90;
+    c.strokeStyle = TH.envB; c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 7, 0, TAU); c.stroke();
+    c.fillStyle = TH.envB; c.font = `600 11px ${TH.mono}`; c.textAlign = right ? 'right' : 'left'; c.textBaseline = 'middle';
+    c.fillText(`+${r.over.toFixed(1)}%`, x + (right ? -12 : 12), Math.max(Tp + 8, y));
+    c.textBaseline = 'alphabetic';
+  }
+  c.fillStyle = TH.dim; c.font = `11px ${TH.body}`; c.textAlign = 'left';
+  c.fillText('1주기', W / 2 + 6, H - 5);
+  lgLast.style.setProperty('--lg-last', lastCol);
+  lgLastTxt.textContent = `방금 더한 사인 (n = ${r.used[r.used.length - 1]})`;
+  labCount.textContent = `사인 ${r.used.length}개`;
+  labErr.textContent = `목표와 차이 ${r.err.toFixed(1)}%`;
+  labGibbs.textContent = lab.phases ? '위상 섞음: 진폭은 그대로'
+    : r.over === null ? '점프가 없어 깁스 현상 없음'
+    : r.over > 0 ? `목표 초과 최대 +${r.over.toFixed(1)}% (점프 대비)` : '목표보다 튀어나온 곳 없음';
+}
+function stemLayout(W, H) { const L = 30, R = 10; return { L, R, step: (W - L - R) / LAB_MAX, Tp: 10, base: H - 46, dialY: H - 27, labY: H - 6 }; }
+function drawStem() {
+  dirty.stem = false;
+  const { c, W, H } = setupCanvas(cvStem), S = SHAPES[lab.shape], G = stemLayout(W, H), h = G.base - G.Tp;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line; hline(c, G.L, W - G.R, G.Tp); hline(c, G.L, W - G.R, G.Tp + h / 2);
+  c.strokeStyle = TH.line2; hline(c, G.L, W - G.R, G.base);
+  c.font = `10px ${TH.mono}`; c.fillStyle = TH.dim; c.textAlign = 'right';
+  c.fillText('1', G.L - 8, G.Tp + 3); c.fillText('0', G.L - 8, G.base + 3); c.fillText('φ', G.L - 8, G.dialY + 3); c.fillText('n', G.L - 8, G.labY);
+  const sw = clamp(G.step * .3, 2, 4), dr = clamp(G.step * .36, 3, 6.5);
+  let k = 0;
+  c.textAlign = 'center';
+  for (let n = 1; n <= LAB_MAX; n++) {
+    const x = G.L + (n - .5) * G.step, on = n <= lab.N;
+    if (G.step >= 18 || n === 1 || n % 4 === 0) { c.fillStyle = on ? TH.ink : TH.dim; c.fillText(String(n), x, G.labY); }
+    if (!S.use(n)) { c.fillStyle = TH.dim; c.globalAlpha = .5; c.beginPath(); c.arc(x, G.base, 1.5, 0, TAU); c.fill(); c.globalAlpha = 1; continue; }
+    const col = screenColor(k++), y = G.base - S.amp(n) * h;
+    c.globalAlpha = on ? 1 : .4; c.strokeStyle = on ? col : TH.dim; c.lineWidth = sw; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(x, G.base); c.lineTo(x, y); c.stroke();
+    c.lineCap = 'butt'; c.globalAlpha = 1;
+    if (!on) continue;
+    c.beginPath(); c.arc(x, y, sw * .9 + 1, 0, TAU); c.fillStyle = col; c.fill();
+    const a = phaseOf(n) * Math.PI / 180;
+    c.lineWidth = 1; c.strokeStyle = TH.line2; c.beginPath(); c.arc(x, G.dialY, dr, 0, TAU); c.stroke();
+    c.lineWidth = 1.6; c.strokeStyle = col; c.beginPath(); c.moveTo(x, G.dialY); c.lineTo(x + dr * Math.cos(a), G.dialY - dr * Math.sin(a)); c.stroke();
+  }
+}
+
+function syncLabUI() {
+  labN.value = lab.N; labNOut.textContent = `N = ${lab.N}`; paintRange(labN);
+  shapeBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.shape === lab.shape));
+  resetBtn.disabled = !lab.phases;
+  dirty.lab = dirty.stem = true;
+}
+function updateLabStatus() {
+  if (!lab.linked) { labStatus.textContent = '‘합성기로 보내기’를 누르면 이 레시피가 위쪽 사인 오실레이터에 들어가고 N과 연결됩니다.'; return; }
+  const end = lastSendable();
+  labStatus.textContent = '합성기와 연결됨: N을 바꾸면 합성기의 사인이 켜지고 꺼집니다. 소리가 유지되도록 엔벨로프도 바꿨습니다.'
+    + (lab.N > end ? ` 합성기는 사인 ${MAX_P}개까지라 n = ${end}까지만 들립니다.` : '');
+}
+function syncRow(p) {
+  const row = genList.querySelector(`.grow[data-id="${p.id}"]`); if (!row) return;
+  row.classList.toggle('off', !p.on);
+  row.querySelector('.sw').setAttribute('aria-pressed', p.on);
+}
+function sendToSynth() {
+  const S = SHAPES[lab.shape], wasDrone = lab.drone, list = [];
+  for (let n = 1; n <= LAB_MAX && list.length < MAX_P; n++) if (S.use(n)) list.push(n);
+  panic(.05);
+  lab.linked = new Map();
+  state.partials = list.map(n => { const p = makePartial({ ratio: n, level: S.amp(n), phase: phaseOf(n), on: n <= lab.N }); lab.linked.set(n, p.id); return p; });
+  state.envs = { A: { a: .01, d: .2, s: .9, r: .3 }, B: { a: .01, d: .2, s: .9, r: .3 } };
+  markCustom(); renderGenerators(); syncEnvUI(); save();
+  updateLabStatus();
+  if (wasDrone) setDrone(true);
+}
+function applyLabToSynth() {
+  if (!lab.linked) return;
+  let found = 0;
+  for (const [n, id] of lab.linked) {
+    const p = findP(id); if (!p) continue;
+    found++;
+    const on = n <= lab.N;
+    if (p.on !== on) { p.on = on; syncRow(p); }
+  }
+  if (!found) lab.linked = null;
+  else { liveLevels(); dirty.wave = dirty.harm = true; save(); }
+  updateLabStatus();
+}
+function setLabN(n) {
+  n = clamp(Math.round(n), 1, LAB_MAX);
+  if (n === lab.N) return;
+  stopDemo();
+  lab.N = n; syncLabUI(); applyLabToSynth();
+}
+function setShape(s) {
+  stopDemo();
+  lab.shape = s; lab.phases = null;
+  if (lab.linked) sendToSynth();
+  syncLabUI(); updateLabStatus();
+}
+function pushPhases() {
+  if (!lab.linked) return;
+  let any = false;
+  for (const [n, id] of lab.linked) { const p = findP(id); if (p) { p.phase = phaseOf(n); any = true; } }
+  if (!any) return;
+  renderGenerators(); markCustom(); save();
+  if (lab.drone) { const v = active.get(DRONE); if (v) releaseVoice(v, .03); noteOn(DRONE); }
+}
+function scramble() {
+  lab.phases = new Map();
+  for (let n = 1; n <= LAB_MAX; n++) lab.phases.set(n, Math.floor(Math.random() * 72) * 5);
+  pushPhases(); syncLabUI();
+}
+function resetPhases() { lab.phases = null; pushPhases(); syncLabUI(); }
+function setDroneUI(on) {
+  lab.drone = on;
+  droneBtn.setAttribute('aria-pressed', on);
+  droneBtn.textContent = on ? 'C4 멈추기' : 'C4 계속 울리기';
+}
+function setDrone(on) {
+  if (on) { if (!ensureAudio()) return; keyDown(DRONE); }
+  else if (lab.drone) { held.delete(DRONE); sustained.delete(DRONE); const v = active.get(DRONE); if (v) releaseVoice(v); refreshKeys(); }
+  setDroneUI(on);
+}
+function stopDemo() {
+  clearInterval(lab.demo); lab.demo = 0;
+  clearTimeout(lab.demoEnd); lab.demoEnd = 0;
+  demoBtn.setAttribute('aria-pressed', 'false'); demoBtn.textContent = '들으며 쌓기';
+}
+function startDemo() {
+  stopDemo();
+  if (!ensureAudio()) return;
+  lab.phases = null; lab.N = 1;
+  sendToSynth(); syncLabUI();
+  setDrone(true);
+  const S = SHAPES[lab.shape], end = lastSendable();
+  lab.demo = setInterval(() => {
+    let n = lab.N + 1;
+    while (n <= end && !S.use(n)) n++;
+    if (n > end) { stopDemo(); lab.demoEnd = setTimeout(() => setDrone(false), 1500); return; }
+    lab.N = n; syncLabUI(); applyLabToSynth();
+  }, 450);
+  demoBtn.setAttribute('aria-pressed', 'true'); demoBtn.textContent = '쌓기 멈추기';
+}
+
+shapeBtns.forEach(b => b.addEventListener('click', () => setShape(b.dataset.shape)));
+labN.addEventListener('input', () => setLabN(+labN.value));
+$('#labSend').addEventListener('click', () => { stopDemo(); sendToSynth(); });
+demoBtn.addEventListener('click', () => { if (lab.demo) { stopDemo(); setDrone(false); } else startDemo(); });
+droneBtn.addEventListener('click', () => setDrone(!lab.drone));
+$('#labScramble').addEventListener('click', scramble);
+resetBtn.addEventListener('click', resetPhases);
+let stemDrag = false;
+const stemPick = (e) => { const p = pos(e, cvStem), G = stemLayout(p.W, p.H); setLabN(Math.floor((p.x - G.L) / G.step) + 1); };
+cvStem.addEventListener('pointerdown', (e) => { e.preventDefault(); stemDrag = true; cvStem.setPointerCapture(e.pointerId); stemPick(e); });
+cvStem.addEventListener('pointermove', (e) => { if (stemDrag) stemPick(e); });
+cvStem.addEventListener('pointerup', () => { stemDrag = false; });
+cvStem.addEventListener('pointercancel', () => { stemDrag = false; });
+function revealLab() {
+  const r = labBox.getBoundingClientRect();
+  if (r.top < 0 || r.top > window.innerHeight * .6) labBox.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}
+document.querySelectorAll('[data-try]').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.try;
+  if (t === 'bell') { loadPreset('bell'); go($('.p-gen')); return; }
+  if (t === 'eq') { go($('#eq')); return; }
+  if (t === 'missions') { go(misPanel); return; }
+  if (t === 'n1') setLabN(1);
+  else if (t === 'scramble') scramble();
+  else if (t === 'gibbs') { if (lab.shape === 'tri') setShape('square'); if (lab.phases) resetPhases(); setLabN(32); }
+  else setShape(t);
+  revealLab();
+}));
+document.querySelectorAll('.navlink').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); go(document.querySelector(a.getAttribute('href'))); }));
+
+/* ---------- missions ---------- */
+// Similarity: per-harmonic level difference in dB (floor -40 dB, both spectra normalised to their loudest
+// component), weighted by how loud the component is. Phase and envelope are not scored.
+const FLOOR_DB = -40, SCALE_DB = 20, CENTS_TOL = 30;
+const SUSTAIN_ENV = { a: .01, d: .2, s: .85, r: .25 };
+const MISSIONS = [
+  { id: 'octave', title: '옥타브 위에 하나 더', note: 60, thr: 90,
+    goal: '기본음 사인에, 한 옥타브 위 사인을 절반 크기로 더해 보세요.',
+    why: '배율 2는 주파수가 두 배라는 뜻이고, 귀에는 한 옥타브 위로 들립니다. 레벨 50%는 진폭이 절반입니다.',
+    hint: '사인 2개면 됩니다. 배율 1은 레벨 100%, 배율 2는 레벨 50%.',
+    target: [[1, 1], [2, .5]] },
+  { id: 'square', title: '속이 빈 소리: 사각파', note: 60, thr: 85,
+    goal: '홀수 배음 1, 3, 5, 7, 9만 써서 사각파를 만드세요.',
+    why: '사각파에는 홀수 배음만 있고 진폭은 1/n로 줄어듭니다. 짝수 배음이 없어서 속이 빈 듯한 소리가 납니다.',
+    hint: '레벨은 배율 1: 100%, 3: 33%, 5: 20%, 7: 14%, 9: 11%.',
+    target: [1, 3, 5, 7, 9].map(n => [n, 1 / n]) },
+  { id: 'saw', title: '밝은 소리: 톱니파', note: 60, thr: 85,
+    goal: '배음 1부터 8까지 모두 써서 톱니파를 만드세요.',
+    why: '톱니파는 모든 정수 배음을 1/n 크기로 가집니다. 높은 배음이 많이 남아 밝고 거칠게 들립니다.',
+    hint: '배율 n의 레벨을 100/n %로 맞추세요. 2는 50%, 4는 25%, 8은 13%.',
+    target: [1, 2, 3, 4, 5, 6, 7, 8].map(n => [n, 1 / n]) },
+  { id: 'tri', title: '부드러운 소리: 삼각파', note: 60, thr: 90,
+    goal: '홀수 배음으로 삼각파를 만드세요. 다 만들면 사각파와 소리를 비교해 보세요.',
+    why: '삼각파도 홀수 배음만 쓰지만 진폭이 1/n²로 빨리 줄어듭니다. 그래서 사인에 가까운 부드러운 소리가 납니다.',
+    hint: '레벨은 배율 1: 100%, 3: 11%, 5: 4%, 7: 2%.',
+    target: [1, 3, 5, 7].map(n => [n, 1 / (n * n)]) },
+  { id: 'budget', title: '사인 4개로 사각파 흉내', note: 60, thr: 80, maxSines: 4,
+    goal: '사인을 4개까지만 써서 미션 2의 사각파에 최대한 가깝게 만드세요.',
+    why: '모든 성분을 쓸 수 없을 때는 큰 성분부터 고르는 것이 가장 효과적입니다. 음악 파일 압축도 비슷한 원리로 덜 중요한 성분을 버립니다.',
+    hint: '사각파의 배음은 1/n 크기라서 n이 작을수록 큽니다. 가장 큰 네 개를 고르세요.',
+    target: [1, 3, 5, 7, 9].map(n => [n, 1 / n]) },
+  { id: 'organ', title: '파이프 오르간', note: 48, thr: 85,
+    goal: '한 옥타브 아래(배율 0.5)와 5도 위(배율 1.5)까지 섞어 오르간 소리를 만드세요.',
+    why: '오르간은 길이가 다른 파이프를 함께 울려 음색을 만듭니다. 배율 0.5, 1, 1.5, 2, 4가 각각 한 줄의 파이프입니다.',
+    hint: '배율 0.5: 70%, 1: 100%, 1.5: 50%, 2: 60%, 4: 30%.',
+    target: [[.5, .7], [1, 1], [1.5, .5], [2, .6], [4, .3]] },
+  { id: 'bar', title: '철금 막대', note: 72, thr: 85, env: { a: .002, d: 1.2, s: 0, r: .8 },
+    goal: '배율이 정수가 아닌 사인 3개로 금속 막대를 두드린 소리를 만드세요.',
+    why: '두께가 고른 막대를 양 끝이 자유롭게 떨게 하면 기본 진동수의 약 2.76배, 5.40배로도 진동합니다. 정수배가 아니어서 금속성으로 들립니다.',
+    hint: '배율 1: 100%, 2.76: 50%, 5.4: 25%. 엔벨로프는 채점하지 않지만 Decay를 1초쯤, Sustain을 0으로 하면 더 닮게 들립니다.',
+    target: [[1, 1], [2.756, .5], [5.404, .25]] },
+  { id: 'mystery', title: '숨은 소리 찾기', note: 60, thr: 85, hidden: true,
+    goal: '목표 소리만 듣고 어떤 배음이 들어 있는지 찾아 만드세요. 정수 배음 4개를 썼습니다.',
+    why: '귀로 배음을 골라내는 연습입니다. 소리를 사인 성분으로 나누어 보는 것이 푸리에 분석입니다.',
+    hint: '목표 스펙트럼을 열었습니다. 막대 위치가 배율, 높이가 세기입니다.',
+    target: [[1, .7], [2, 1], [3, .35], [5, .5]] },
+];
+const MSTORE = 'sine-garden-missions-v1';
+const mission = { idx: 0, engaged: false, hint: false, hard: false, auditions: [] };
+let progress = {};
+try { const p = JSON.parse(localStorage.getItem(MSTORE) || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) progress = p; } catch (_) { /* storage unavailable */ }
+const saveProgress = () => { try { localStorage.setItem(MSTORE, JSON.stringify(progress)); } catch (_) { /* storage unavailable */ } };
+const recOf = (m) => { const r = progress[m.id]; return r && typeof r === 'object' ? { best: Number(r.best) || 0, done: !!r.done } : { best: 0, done: false }; };
+
+const misPanel = $('#missions'), misList = $('#misList'), cvMis = $('#cvMis'), hud = $('#hud');
+const curM = () => MISSIONS[mission.idx];
+const targetVisible = () => { const m = curM(); return (!m.hidden && !mission.hard) || mission.hint; };
+function ghostTargets() { return mission.engaged && targetVisible() ? curM().target : []; }
+const noteName = (n) => ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][n % 12] + (Math.floor(n / 12) - 1);
+
+function spectrumOf(list) {
+  const cs = [];
+  for (const [ratio, amp] of list) {
+    if (!(amp > 0)) continue;
+    const c = cs.find(c => Math.abs(1200 * Math.log2(ratio / c.ratio)) < CENTS_TOL);
+    if (c) c.pow += amp * amp; else cs.push({ ratio, pow: amp * amp });
+  }
+  const mx = cs.reduce((m, c) => Math.max(m, Math.sqrt(c.pow)), 0);
+  return cs.map(c => ({ ratio: c.ratio, db: Math.max(FLOOR_DB, 20 * Math.log10(Math.sqrt(c.pow) / mx)) }));
+}
+function scoreMission() {
+  const m = curM();
+  const mine = state.partials.filter(p => p.on && p.level > 0);
+  const t = spectrumOf(m.target), s = spectrumOf(mine.map(p => [p.ratio * Math.pow(2, p.detune / 1200), p.level]));
+  const used = new Set(), rows = [];
+  for (const x of t) {
+    let best = -1, bd = CENTS_TOL;
+    s.forEach((y, i) => { if (used.has(i)) return; const d = Math.abs(1200 * Math.log2(y.ratio / x.ratio)); if (d < bd) { bd = d; best = i; } });
+    if (best >= 0) used.add(best);
+    rows.push({ ratio: x.ratio, t: x.db, s: best >= 0 ? s[best].db : FLOOR_DB, extra: false });
+  }
+  s.forEach((y, i) => { if (!used.has(i)) rows.push({ ratio: y.ratio, t: FLOOR_DB, s: y.db, extra: true }); });
+  let ws = 0, ds = 0;
+  for (const r of rows) { r.w = (Math.max(r.t, r.s) - FLOOR_DB) / -FLOOR_DB; r.d = Math.abs(r.t - r.s); ws += r.w; ds += r.w * r.d; }
+  const pct = clamp(100 * (1 - (ws ? ds / ws : -FLOOR_DB) / SCALE_DB), 0, 100);
+  return { pct, rows, count: mine.length };
+}
+function feedbackText(r) {
+  let worst = null;
+  for (const row of r.rows) if (!worst || row.w * row.d > worst.w * worst.d) worst = row;
+  if (!worst || worst.w * worst.d < .8) return '거의 같습니다. 레벨을 조금씩 다듬어 보세요.';
+  const name = `배율 ×${fmtRatio(worst.ratio)}`;
+  if (worst.extra) return `가장 큰 차이: ${name} 사인은 목표에 없어요. 끄거나 지워 보세요.`;
+  if (worst.s <= FLOOR_DB + .01) return `가장 큰 차이: ${name} 사인이 빠졌어요.`;
+  return `가장 큰 차이: ${name} 사인이 목표보다 ${Math.round(worst.d)} dB ${worst.s < worst.t ? '작아요' : '커요'}.`;
+}
+
+function renderMissionList() {
+  let done = 0;
+  misList.innerHTML = MISSIONS.map((m, i) => {
+    const rec = recOf(m); if (rec.done) done++;
+    const sub = rec.done ? `성공 · 최고 ${rec.best}%` : rec.best ? `최고 ${rec.best}%` : '도전 전';
+    return `<li><button class="mitem${rec.done ? ' done' : ''}" type="button" data-i="${i}" aria-current="${i === mission.idx}"><span class="mn">${i + 1}</span><span class="mt">${m.title}<small>${sub}</small></span><span class="mc" aria-hidden="true">✓</span></button></li>`;
+  }).join('');
+  $('#misDone').textContent = `${done} / ${MISSIONS.length} 성공`;
+}
+function renderMissionDetail() {
+  const m = curM();
+  $('#misNum').textContent = `미션 ${mission.idx + 1} / ${MISSIONS.length}`;
+  $('#misTitle').textContent = m.title;
+  $('#misGoal').textContent = m.goal;
+  $('#misWhy').textContent = m.why;
+  const rules = [`성공 기준 ${m.thr}% 이상`, `${noteName(m.note)} 음으로 재생`];
+  if (m.maxSines) rules.push(`사인 최대 ${m.maxSines}개`);
+  if (m.hidden) rules.push('목표 스펙트럼 숨김');
+  if (m.env) rules.push('목표는 금방 사라지는 소리');
+  $('#misRules').innerHTML = rules.map(t => `<span class="pill">${t}</span>`).join('');
+  $('#misHint').setAttribute('aria-pressed', mission.hint);
+  $('#misHintText').hidden = !mission.hint;
+  $('#misHintText').textContent = m.hint;
+  const thr = `${m.thr}%`;
+  $('#misThr').style.left = thr; $('#hudThr').style.left = thr;
+  $('#hudNum').textContent = `미션 ${mission.idx + 1} · 기준 ${m.thr}%`;
+  $('#hudTitle').textContent = m.title;
+  $('#misHard').setAttribute('aria-pressed', mission.hard);
+}
+function selectMission(i) {
+  stopAudition();
+  mission.idx = clamp(i, 0, MISSIONS.length - 1); mission.hint = false;
+  engage();
+  renderMissionList(); renderMissionDetail();
+  dirty.harm = true;
+}
+function engage() { if (!mission.engaged) { mission.engaged = true; dirty.harm = true; } updateHud(); }
+
+function updateMission() {
+  const m = curM(), r = scoreMission(), over = !!m.maxSines && r.count > m.maxSines;
+  const pass = r.pct >= m.thr && !over, shown = Math.floor(r.pct);
+  $('#misPct').textContent = `${shown}%`; $('#hudPct').textContent = `${shown}%`;
+  for (const id of ['#misFill', '#hudFill']) $(id).style.width = `${r.pct.toFixed(1)}%`;
+  $('#misBar').classList.toggle('pass', pass); $('#hudBar').classList.toggle('pass', pass);
+  const verdict = $('#misVerdict');
+  verdict.textContent = pass ? '성공' : over ? '사인이 너무 많아요' : r.pct >= m.thr - 10 ? '거의 다 왔어요' : '도전 중';
+  verdict.classList.toggle('pass', pass);
+  $('#misFeedback').textContent = pass
+    ? `성공! 목표 소리와 ${shown}% 닮았습니다.${mission.idx < MISSIONS.length - 1 ? ' 다음 미션에 도전해 보세요.' : ' 모든 미션을 마쳤습니다.'}`
+    : over ? `사인을 ${m.maxSines}개 이하로 줄이세요. 지금 ${r.count}개를 켜 두었어요.`
+    : targetVisible() ? feedbackText(r)
+    : '목표 소리와 내 소리를 번갈아 들으며 비교해 보세요. 막히면 힌트를 누르세요.';
+  $('#misNext').hidden = !(pass && mission.idx < MISSIONS.length - 1);
+  if (mission.engaged && !over) {
+    const rec = recOf(m); let changed = false;
+    if (shown > rec.best) { rec.best = shown; changed = true; }
+    if (pass && !rec.done) { rec.done = true; changed = true; }
+    if (changed) { progress[m.id] = rec; saveProgress(); renderMissionList(); }
+  }
+  drawMission(r);
+}
+function drawMission(r) {
+  const { c, W, H } = setupCanvas(cvMis), show = targetVisible();
+  const L = 44, R = 12, Tp = 12, B = 22, w = W - L - R, h = H - Tp - B;
+  const ratios = r.rows.filter(x => (show && x.t > FLOOR_DB) || x.s > FLOOR_DB).map(x => x.ratio);
+  const xMax = Math.max(6, Math.ceil(Math.max(0, ...ratios) + .6));
+  const X = (q) => L + q / xMax * w, Y = (db) => Tp + (db / FLOOR_DB) * h;
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.font = `10px ${TH.mono}`;
+  for (const db of [0, -10, -20, -30]) {
+    c.strokeStyle = db === 0 ? TH.line2 : TH.line; hline(c, L, L + w, Y(db));
+    c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText(db === 0 ? '0 dB' : minus(String(db)), L - 6, Y(db) + 3);
+  }
+  c.strokeStyle = TH.line2; hline(c, L, L + w, Y(FLOOR_DB));
+  const step = xMax <= 12 ? 1 : 2;
+  c.textAlign = 'center'; c.fillStyle = TH.dim;
+  for (let k = step; k <= xMax; k += step) c.fillText(String(k), X(k), H - 6);
+  c.textAlign = 'right'; c.fillText('×f', L - 6, H - 6);
+  const bw = clamp(w / xMax * .2, 4, 12);
+  for (const row of r.rows) {
+    const x = X(row.ratio);
+    if (show && row.t > FLOOR_DB) {
+      const y = Y(row.t);
+      c.globalAlpha = .18; c.fillStyle = TH.envB; c.fillRect(x - bw - 1, y, bw, Y(FLOOR_DB) - y); c.globalAlpha = 1;
+      c.strokeStyle = TH.envB; c.lineWidth = 1.5; c.strokeRect(x - bw - 1 + .75, y + .75, bw - 1.5, Y(FLOOR_DB) - y - .75);
+    }
+    if (row.s > FLOOR_DB) { const y = Y(row.s); c.fillStyle = TH.envA; c.fillRect(x + 1, y, bw, Y(FLOOR_DB) - y); }
+  }
+  if (!show) { c.font = `11px ${TH.body}`; c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText('목표 스펙트럼은 숨겨져 있어요 · 힌트를 누르면 보입니다', W - 14, Tp + 14); }
+}
+
+function setNow(text) { $('#misNow').textContent = text; }
+function stopAudition() {
+  for (const a of mission.auditions) { a.timers.forEach(clearTimeout); if (a.v && a.v.tRel === null) releaseVoice(a.v, .05); }
+  mission.auditions = []; setNow('');
+}
+function audition(which, delay) {
+  const a = { timers: [], v: null };
+  mission.auditions.push(a);
+  a.timers.push(setTimeout(() => {
+    const m = curM();
+    const parts = which === 'target'
+      ? m.target.map(([ratio, level]) => ({ id: null, on: true, ratio, level, detune: 0, phase: 0, env: 'A' }))
+      : state.partials;
+    const env = m.env || SUSTAIN_ENV;
+    a.v = startVoice(m.note, parts, which === 'target' ? { A: env, B: env } : state.envs, true);
+    setNow(which === 'target' ? '▶ 목표 소리' : '▶ 내 소리');
+    a.timers.push(setTimeout(() => { releaseVoice(a.v, a.v.envSnap.A.r); setNow(''); }, 1300));
+  }, delay));
+}
+function play(kind) {
+  if (!ensureAudio()) return;
+  stopAudition(); engage();
+  if (kind === 'ab') { audition('target', 0); audition('mine', 1700); }
+  else audition(kind, 0);
+}
+function resetToSine() {
+  panic(.05);
+  lab.linked = null; updateLabStatus();
+  state.partials = [makePartial({ ratio: 1, level: 1 })];
+  state.envs = { A: { ...SUSTAIN_ENV }, B: { ...SUSTAIN_ENV } };
+  markCustom(); renderGenerators(); syncEnvUI(); save();
+  engage();
+}
+let misInView = false;
+function updateHud() {
+  const on = mission.engaged && !misInView;
+  hud.hidden = !on;
+  root.classList.toggle('hud-on', on);
+}
+new IntersectionObserver((es) => { misInView = es[es.length - 1].isIntersecting; updateHud(); }, { threshold: .08 }).observe(misPanel);
+
+misList.addEventListener('click', (e) => { const b = e.target.closest('.mitem'); if (b) selectMission(+b.dataset.i); });
+$('#misTarget').addEventListener('click', () => play('target'));
+$('#misMine').addEventListener('click', () => play('mine'));
+$('#misAB').addEventListener('click', () => play('ab'));
+$('#hudTarget').addEventListener('click', () => play('target'));
+$('#hudMine').addEventListener('click', () => play('mine'));
+$('#misHint').addEventListener('click', () => { mission.hint = !mission.hint; engage(); renderMissionDetail(); dirty.harm = true; });
+$('#misHard').addEventListener('click', () => { mission.hard = !mission.hard; renderMissionDetail(); dirty.harm = true; });
+$('#misReset').addEventListener('click', resetToSine);
+$('#misBuild').addEventListener('click', () => { engage(); go($('.p-gen')); });
+$('#misNext').addEventListener('click', () => selectMission(mission.idx + 1));
+$('#hudGo').addEventListener('click', () => go(misPanel));
+$('#hudClose').addEventListener('click', () => { stopAudition(); mission.engaged = false; updateHud(); dirty.harm = true; });
+let clearArmed = 0;
+$('#misClear').addEventListener('click', (e) => {
+  const b = e.currentTarget;
+  if (!clearArmed) { b.textContent = '한 번 더 누르면 지워집니다'; clearArmed = setTimeout(() => { clearArmed = 0; b.textContent = '기록 지우기'; }, 3000); return; }
+  clearTimeout(clearArmed); clearArmed = 0; b.textContent = '기록 지우기';
+  progress = {}; saveProgress(); renderMissionList(); dirty.harm = true;
+});
+
+/* ---------- theme + resize ---------- */
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+if (mq.addEventListener) mq.addEventListener('change', readTheme);
+new MutationObserver(readTheme).observe(root, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(markAllDirty);
+const ro = new ResizeObserver(() => { markAllDirty(); if (kb.clientWidth !== kbWidth) renderKeyboard(); });
+[cvWave, cvHarm, cvScope, cvEnv, cvEq, cvLab, cvStem, cvMis, kb.parentElement].forEach(el => ro.observe(el));
+
+/* ---------- main loop ---------- */
+let prevVoices = 0;
+function frame() {
+  const running = ctx && ctx.state === 'running';
+  if (dirty.wave) drawWave();
+  if (dirty.harm) { drawHarm(); updateMission(); }
+  if (dirty.env || voices.length || prevVoices) drawEnv();
+  prevVoices = voices.length;
+  if (dirty.eq || running) drawEq();
+  if (dirty.scope || running) drawScope();
+  if (dirty.lab) drawLab();
+  if (dirty.stem) drawStem();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- boot ---------- */
+readTheme();
+buildEqUI();
+if (restore()) { presetSel.value = state.preset; renderGenerators(); syncEnvUI(); }
+else loadPreset('saw');
+vol.value = state.master; volOut.textContent = fmtVol(state.master); paintRange(vol);
+octOut.textContent = `C${state.octave}`;
+syncBandUI();
+renderKeyboard();
+updateAudioUI();
+updateVoiceCount();
+syncLabUI();
+updateLabStatus();
+mission.idx = Math.max(0, MISSIONS.findIndex(m => !recOf(m).done));
+renderMissionList();
+renderMissionDetail();
+requestAnimationFrame(frame);
+if (location.hash === '#fourier' || location.hash === '#missions') requestAnimationFrame(() => $(location.hash).scrollIntoView());
+})();
+</script>
+</body>
+</html>
