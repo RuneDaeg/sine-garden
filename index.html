@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sine Garden</title>
-<meta name="description" content="사인파를 쌓아 소리를 만들며 푸리에 합성을 배우는 웹 신시사이저. 엔벨로프, EQ, 푸리에 실험실, 소리 맞히기 미션.">
+<title>Fourier Garden</title>
+<meta name="description" content="푸리에 변환을 배우고 사각파·삼각파·톱니파를 사인파로 쌓아 본 뒤, 엔벨로프와 EQ까지 써서 나만의 소리를 만드는 웹 실험실.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233245CF'/%3E%3Cpath d='M4 16c3-9 6-9 8 0s5 9 8 0 5-9 8 0' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>body{margin:0}[hidden]{display:none!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,6 +75,7 @@
 body{
   background:var(--bg); color:var(--ink);
   font-family:var(--f-body); font-size:14px; line-height:1.45;
+  word-break:keep-all; overflow-wrap:break-word;
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:18px 36px;
@@ -104,13 +105,25 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);background:var(--we
 .pill{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .pill.on{color:var(--ink);border-color:var(--accent)}
 
-/* view tabs: the synth and the missions are separate screens that share the generators */
+/* step tabs: four screens in learning order; the missions and the studio share the generators */
 .tabs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:2px 4px;border-bottom:1px solid var(--line)}
 .tab{border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;color:var(--muted);font:600 14px var(--f-body);padding:8px 14px 10px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .tab:hover{color:var(--ink)}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab i{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font:600 11px/1 var(--f-mono);font-style:normal;color:var(--muted)}
+.tab[aria-selected="true"] i{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab.done i{font-size:0;border-color:var(--good);color:var(--good)}
+.tab.done i::before{content:"✓";font-size:12px}
+.tab.done[aria-selected="true"] i{background:var(--good);color:var(--good-ink)}
 .tab .pill{font-size:10.5px;padding:1px 7px}
-.app[data-view="synth"] > .v-mis,.app[data-view="mission"] > .v-synth,.app[data-view="mission"] .f-preset{display:none}
+@media (max-width:640px){
+  .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+  .tab{flex-direction:column;gap:4px;padding:6px 2px 8px;font-size:12px;line-height:1.25;text-align:center;word-break:keep-all}
+  .tab .pill{display:none}
+}
+.app:not([data-view="learn"]) > .v-learn,.app:not([data-view="waves"]) > .v-waves,.app:not([data-view="mission"]) > .v-mis,
+.app:not([data-view="synth"]) > .v-synth,.app:not([data-view="synth"]) .f-preset,
+.app:is([data-view="learn"],[data-view="waves"]) > .p-gen{display:none}
 
 /* panels */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;min-width:0;display:flex;flex-direction:column;gap:12px}
@@ -230,7 +243,6 @@ input[type="range"]:disabled{opacity:.35;cursor:not-allowed}
 .flow li b{font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
 
 /* fourier lab */
-.navlink{color:var(--accent);text-decoration:underline;text-underline-offset:3px;font-weight:500}
 .p-lab{grid-column:1/-1}
 .lab{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px 32px;align-items:start}
 .lesson{min-width:0;display:flex;flex-direction:column;gap:16px;max-width:62ch}
@@ -259,8 +271,6 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
 .labbox{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px;min-width:0}
 .labctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end}
 .labctl .nsl{flex:1 1 220px}
-.seg.shape button{width:auto;padding:6px 13px;font:600 12px var(--f-body)}
-.seg.shape button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted)}
 .legend > span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:26px;height:12px;border-radius:3px;background:var(--screen);position:relative}
@@ -275,6 +285,51 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
   .lab{grid-template-columns:minmax(0,1fr)}
   .labbox{order:-1;position:static}
   .lesson{max-width:none}
+}
+
+/* lesson screens: step 1 (Fourier transform) and step 2 (three waves) */
+.intro{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;padding:4px 2px 0;max-width:880px}
+.intro h2{margin:0;font-size:24px;font-weight:600;line-height:1.3;text-wrap:balance}
+.intro p{margin:0;font-size:15px;line-height:1.75;text-wrap:pretty}
+.p-learn,.p-waves{grid-column:1/-1}
+.note{font-size:12.5px;color:var(--muted)}
+.chap{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px 32px;align-items:start}
+.chap-t{display:flex;flex-direction:column;gap:14px;min-width:0;max-width:62ch}
+.chap-t > p{margin:0;line-height:1.75;text-wrap:pretty}
+.chap-t b{font-weight:600}
+.chap-v{display:flex;flex-direction:column;gap:10px;min-width:0}
+#cvTD{height:150px}
+#cvFD{height:160px;touch-action:none;cursor:ns-resize}
+#cvDet1,#cvDet2{height:112px}
+#cvScan{height:150px}
+.detread{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--well)}
+.detread .dv{display:flex;flex-direction:column;gap:3px}
+.detread output{font:500 24px/1 var(--f-mono);letter-spacing:-.02em}
+.detread .mfb{flex:1 1 240px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.fact{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--well)}
+.fact h3{margin:0;font-size:15px;font-weight:600}
+.fact p{margin:0;font-size:13.5px;line-height:1.7;text-wrap:pretty}
+.wcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.wcard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--well)}
+.wcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wsel{width:100%;display:flex;flex-direction:column;gap:6px;border:0;padding:0;background:transparent;color:inherit;text-align:left;cursor:pointer;min-width:0}
+.wname{font-weight:600;font-size:15px}
+.wrec{font-size:12px;color:var(--muted)}
+.wfeel{font-size:12.5px;color:var(--muted)}
+.wcv{height:96px}
+.stepnav{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding-top:2px}
+.btn.big{padding:10px 18px;font-size:14px}
+@media (max-width:980px){.chap{grid-template-columns:minmax(0,1fr)}.chap-t{max-width:none}}
+@media (max-width:640px){
+  .intro h2{font-size:20px}
+  .wcards{gap:6px}
+  .wcard{padding:8px}
+  .wcv{height:72px}
+  .wname{font-size:13.5px}
+  .wrec{font-size:11px}
+  .wfeel{display:none}
+  .wplay{padding:5px 8px;font-size:12px}
 }
 
 /* missions: list across the top, generators on the left (same place as in the synth view), mission card on the right */
@@ -341,11 +396,11 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
 </head>
 <body>
 
-<div class="app" data-view="synth">
+<div class="app" data-view="learn">
   <header class="top">
     <div class="brand">
-      <h1>Sine Garden</h1>
-      <p>사인파를 겹쳐 소리를 만드는 가산 합성기 · <a class="navlink" href="#fourier">푸리에 합성 배우기 ↓</a></p>
+      <h1>Fourier Garden</h1>
+      <p>푸리에 변환을 배우고, 사인파를 쌓아 나만의 소리를 만드는 실험실</p>
     </div>
     <div class="topctl">
       <label class="field f-preset" for="preset"><span>프리셋</span><select id="preset"></select></label>
@@ -356,10 +411,149 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     </div>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="화면 선택">
-    <button class="tab" type="button" role="tab" data-view="synth" aria-selected="true">신시사이저</button>
-    <button class="tab" type="button" role="tab" data-view="mission" aria-selected="false">소리 맞히기 미션 <span class="pill" id="tabMis">0 / 8</span></button>
+  <nav class="tabs" role="tablist" aria-label="학습 단계">
+    <button class="tab" type="button" role="tab" data-view="learn" aria-selected="true"><i>1</i><span>푸리에 변환</span></button>
+    <button class="tab" type="button" role="tab" data-view="waves" aria-selected="false"><i>2</i><span>사각·삼각·<wbr>톱니파</span></button>
+    <button class="tab" type="button" role="tab" data-view="mission" aria-selected="false"><i>3</i><span>소리 맞히기 미션</span><span class="pill" id="tabMis">0 / 8</span></button>
+    <button class="tab" type="button" role="tab" data-view="synth" aria-selected="false"><i>4</i><span>나만의 소리</span></button>
   </nav>
+
+  <section class="intro v-learn" aria-labelledby="h-learn">
+    <span class="eyebrow">STEP 1 / 4</span>
+    <h2 id="h-learn">푸리에 변환: 소리를 사인파로 쪼개기</h2>
+    <p>1807년 프랑스의 수학자 조제프 푸리에는 열이 퍼지는 현상을 연구하다가, 일정하게 반복되는 신호는 모두 사인파를 더해 만들 수 있다고 주장했습니다. 거꾸로, 복잡한 소리 속에 어떤 사인파가 얼마나 들어 있는지 찾아내는 계산이 푸리에 변환입니다. 이 단계에서는 소리를 두 가지 방법으로 보고, 푸리에 변환이 사인을 찾아내는 원리를 직접 돌려 봅니다.</p>
+  </section>
+
+  <section class="panel p-learn v-learn" aria-labelledby="h-two">
+    <div class="ph"><h2 id="h-two">Two Views <span>1-1 · 소리를 보는 두 가지 방법</span></h2></div>
+    <div class="chap">
+      <div class="chap-t">
+        <p class="lead">소리는 공기의 압력이 빠르게 오르내리는 떨림입니다. 마이크로 재서 시간에 따라 그리면 <b>파형</b>이 됩니다. 이것이 <b>시간 영역</b>에서 본 소리입니다.</p>
+        <p>같은 소리를 ‘어떤 주파수의 사인파가 얼마만큼 들어 있나’로 나타낼 수도 있습니다. 가로축이 주파수, 세로축이 크기인 막대그래프, 곧 <b>스펙트럼</b>입니다. 이것이 <b>주파수 영역</b>에서 본 소리입니다.</p>
+        <p>스펙트럼의 막대를 끌어 올려 보세요. 막대 하나가 사인파 하나입니다. 막대를 여러 개 올리면 파형은 금방 복잡해지지만, 스펙트럼은 여전히 막대 몇 개뿐입니다.</p>
+        <p class="note">파형만 보고는 어떤 사인이 섞였는지 알기 어렵습니다. 파형을 스펙트럼으로 바꾸는 계산이 <b>푸리에 변환</b>, 스펙트럼을 다시 파형으로 되돌리는 계산이 <b>푸리에 역변환</b>(합성)입니다.</p>
+      </div>
+      <div class="chap-v">
+        <div class="pblock">
+          <div class="plab"><b>시간 영역 · 파형</b><span>흰 선이 실제 소리, 색 선이 그 안의 사인들</span></div>
+          <canvas id="cvTD" class="screen" role="img" aria-label="스펙트럼 막대로 만든 사인들과 그 합의 파형"></canvas>
+        </div>
+        <div class="pblock">
+          <div class="plab"><b>주파수 영역 · 스펙트럼</b><span>막대를 위아래로 끌기 · 기본음 도(C4) 262 Hz</span></div>
+          <canvas id="cvFD" class="screen" role="img" aria-label="주파수별 사인 크기 막대그래프. 끌어서 조절"></canvas>
+        </div>
+        <div class="labactions">
+          <button id="fdListen" class="btn primary" type="button" aria-pressed="false">계속 듣기</button>
+          <button class="btn" type="button" data-fd="one">사인 하나</button>
+          <button class="btn" type="button" data-fd="saw">톱니파 맛보기</button>
+          <button class="btn" type="button" data-fd="rand">무작위</button>
+          <span class="pill" id="fdCount"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel p-learn v-learn" aria-labelledby="h-ft">
+    <div class="ph"><h2 id="h-ft">Fourier Transform <span>1-2 · 숨은 사인 찾아내기</span></h2></div>
+    <div class="chap">
+      <div class="chap-t">
+        <p class="lead">오른쪽 수수께끼 소리에는 사인파 몇 개가 섞여 있습니다. 푸리에 변환은 세 단계로 그 사인들을 찾아냅니다.</p>
+        <ol class="steps">
+          <li>
+            <h3>탐지 사인을 곱한다</h3>
+            <p>찾고 싶은 주파수, 곧 기본음의 k배로 떨리는 사인파를 수수께끼 소리에 곱합니다.</p>
+          </li>
+          <li>
+            <h3>평균을 낸다</h3>
+            <p>그 주파수가 소리에 들어 있으면 두 파형이 함께 오르내려서 곱이 거의 늘 양수입니다. 그래서 평균이 크게 남습니다. 들어 있지 않으면 곱이 양수(초록)와 음수(빨강)를 번갈아 오가 평균이 0이 됩니다.</p>
+          </li>
+          <li>
+            <h3>k를 바꿔 가며 되풀이한다</h3>
+            <p>k마다 얻은 값을 그래프로 그리면 봉우리가 솟은 곳이 소리에 들어 있는 사인입니다. 이 그래프가 바로 스펙트럼입니다.</p>
+          </li>
+        </ol>
+        <div class="formula">
+          <math display="block" aria-label="a k 는 T분의 2 곱하기, 0부터 T까지 x t 곱하기 사인 2 파이 k f 0 t 를 t에 대해 적분한 값">
+            <mrow>
+              <mi>a</mi><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo>
+              <mo>=</mo>
+              <mfrac><mn>2</mn><mi>T</mi></mfrac>
+              <msubsup><mo>∫</mo><mn>0</mn><mi>T</mi></msubsup>
+              <mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+              <mo>·</mo>
+              <mi>sin</mi><mo>&#x2061;</mo>
+              <mo>(</mo><mn>2</mn><mi>π</mi><mi>k</mi><msub><mi>f</mi><mn>0</mn></msub><mi>t</mi><mo>)</mo>
+              <mspace width="0.17em"></mspace><mi>d</mi><mi>t</mi>
+            </mrow>
+          </math>
+          <dl class="vars">
+            <dt>x(t)</dt><dd>수수께끼 소리</dd>
+            <dt>sin(2πkf<sub>0</sub>t)</dt><dd>탐지 사인. 기본 주파수 f<sub>0</sub>의 k배로 떨린다</dd>
+            <dt>2/T ∫ … dt</dt><dd>시간 T 동안의 평균에 2를 곱한 값. 사인을 제곱한 값의 평균이 1/2이라서 2를 곱해야 원래 크기가 나온다</dd>
+          </dl>
+        </div>
+        <p class="note">실제 푸리에 변환은 sin과 cos를 함께 쓰는 복소수 e<sup>−i2πft</sup>를 곱합니다. 그래서 시작 위치(위상)가 어긋난 사인도 놓치지 않습니다. 여기서는 수수께끼 소리의 위상을 모두 0으로 두었기 때문에 sin 하나로 충분합니다.</p>
+      </div>
+      <div class="chap-v">
+        <label class="knob" for="detK"><span class="kt"><span>탐지 주파수 k (기본음의 몇 배?)</span><output id="detKOut">k = 2.00</output></span><input id="detK" type="range" min="0" max="8.5" step="0.05" value="2"></label>
+        <div class="pblock">
+          <div class="plab"><b>① 수수께끼 소리와 탐지 사인</b><span>흰 선 x(t) · 주황 선 탐지 사인</span></div>
+          <canvas id="cvDet1" class="screen" role="img" aria-label="수수께끼 소리 파형과 탐지 사인"></canvas>
+        </div>
+        <div class="pblock">
+          <div class="plab"><b>② 둘을 곱한 값</b><span>초록은 양수, 빨강은 음수, 점선은 평균</span></div>
+          <canvas id="cvDet2" class="screen" role="img" aria-label="수수께끼 소리와 탐지 사인의 곱"></canvas>
+        </div>
+        <div class="detread" aria-live="polite">
+          <div class="dv"><output id="detVal">a(k) = 0.00</output><span class="hint">평균 × 2</span></div>
+          <p class="mfb" id="detSay"></p>
+        </div>
+        <div class="pblock">
+          <div class="plab"><b>③ k마다 모은 값 = 스펙트럼</b><span>k를 옮길 때마다 기록됩니다</span></div>
+          <canvas id="cvScan" class="screen" role="img" aria-label="탐지 주파수 k에 따른 a(k) 그래프"></canvas>
+        </div>
+        <div class="labactions">
+          <button id="detScan" class="btn primary" type="button" aria-pressed="false">자동 스캔</button>
+          <button id="detListen" class="btn" type="button">수수께끼 듣기</button>
+          <button id="detRecon" class="btn" type="button" aria-pressed="false">찾은 사인으로 다시 합성</button>
+          <button id="detReveal" class="btn" type="button" aria-pressed="false">정답 보기</button>
+          <button id="detNew" class="btn" type="button">새 수수께끼</button>
+        </div>
+        <p class="hint" id="detPeaks"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel p-learn v-learn" aria-labelledby="h-more">
+    <div class="ph"><h2 id="h-more">Beyond <span>1-3 · 푸리에 변환은 어디에 쓰일까</span></h2></div>
+    <div class="facts">
+      <article class="fact">
+        <h3>거꾸로 하면 합성</h3>
+        <p>스펙트럼의 막대마다 사인파를 만들어 더하면 원래 파형으로 돌아옵니다. 위의 ‘찾은 사인으로 다시 합성’이 바로 이것입니다. 다음 단계부터는 이 방법으로 소리를 만듭니다.</p>
+      </article>
+      <article class="fact">
+        <h3>귀 속의 푸리에 변환</h3>
+        <p>달팽이관 속 기저막은 입구 쪽이 높은 소리에, 안쪽 끝이 낮은 소리에 크게 떨립니다. 귀가 소리를 주파수별로 나눠 듣는 셈이라, 화음 속 음들을 하나하나 구별할 수 있습니다.</p>
+      </article>
+      <article class="fact">
+        <h3>컴퓨터의 푸리에 변환, FFT</h3>
+        <p>1965년 쿨리와 튜키가 발표한 고속 푸리에 변환(FFT) 덕분에 컴퓨터는 눈 깜짝할 사이에 스펙트럼을 계산합니다. 음성 인식, 음악 앱, 이동 통신이 모두 FFT를 씁니다. MP3와 JPEG 압축은 친척뻘인 코사인 변환을 씁니다.</p>
+        <div class="try"><button class="trybtn" type="button" data-try="eq">4단계 EQ에서 실시간 FFT 보기</button></div>
+      </article>
+    </div>
+  </section>
+
+  <nav class="stepnav v-learn" aria-label="단계 이동">
+    <span></span>
+    <button class="btn primary big" type="button" data-goto="waves" data-done="learn">다음: 사각파 · 삼각파 · 톱니파 →</button>
+  </nav>
+
+  <section class="intro v-synth" aria-labelledby="h-studio">
+    <span class="eyebrow">STEP 4 / 4</span>
+    <h2 id="h-studio">나만의 소리 만들기</h2>
+    <p>배운 것을 모두 써 보세요. 사인의 배율과 레벨로 음색을 정하고(푸리에 합성), 엔벨로프로 소리가 시작하고 사라지는 모양을, EQ로 주파수별 크기를 다듬습니다. 건반을 눌러 들으며 고치면 되고, 만든 소리는 이 브라우저에 자동으로 저장됩니다.</p>
+  </section>
+
 
   <section class="panel p-gen" aria-labelledby="h-gen">
     <div class="ph">
@@ -441,11 +635,50 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     <div id="kb" role="group" aria-label="화면 건반"></div>
   </section>
 
-  <section class="panel p-lab v-synth" id="fourier" aria-labelledby="h-lab">
-    <div class="ph"><h2 id="h-lab">Fourier Lab <span>푸리에 합성 배우기</span></h2></div>
+  <section class="intro v-waves" aria-labelledby="h-waves">
+    <span class="eyebrow">STEP 2 / 4</span>
+    <h2 id="h-waves">사각파 · 삼각파 · 톱니파</h2>
+    <p>신시사이저의 기본 파형 세 가지도 모두 사인파의 합입니다. 세 파형을 들어 보며 스펙트럼을 비교하고, 아래 실험실에서 사인을 하나씩 쌓아 파형이 만들어지는 과정을 확인하세요.</p>
+  </section>
+
+  <section class="panel p-waves v-waves" aria-labelledby="h-three">
+    <div class="ph"><h2 id="h-three">Three Waves <span>위는 파형, 아래는 스펙트럼 · 카드를 누르면 실험실에서 열립니다</span></h2></div>
+    <div class="wcards">
+      <div class="wcard" data-shape="square">
+        <button class="wsel" type="button" aria-pressed="true">
+          <span class="wname">사각파</span>
+          <canvas class="screen wcv" role="img" aria-label="사각파의 파형과 스펙트럼"></canvas>
+          <span class="wrec">홀수 배음만 · 크기 1/n</span>
+          <span class="wfeel">속이 빈 듯한 소리</span>
+        </button>
+        <button class="btn wplay" type="button">▶ 듣기</button>
+      </div>
+      <div class="wcard" data-shape="tri">
+        <button class="wsel" type="button" aria-pressed="false">
+          <span class="wname">삼각파</span>
+          <canvas class="screen wcv" role="img" aria-label="삼각파의 파형과 스펙트럼"></canvas>
+          <span class="wrec">홀수 배음만 · 크기 1/n²</span>
+          <span class="wfeel">부드러운 소리</span>
+        </button>
+        <button class="btn wplay" type="button">▶ 듣기</button>
+      </div>
+      <div class="wcard" data-shape="saw">
+        <button class="wsel" type="button" aria-pressed="false">
+          <span class="wname">톱니파</span>
+          <canvas class="screen wcv" role="img" aria-label="톱니파의 파형과 스펙트럼"></canvas>
+          <span class="wrec">모든 배음 · 크기 1/n</span>
+          <span class="wfeel">밝고 거친 소리</span>
+        </button>
+        <button class="btn wplay" type="button">▶ 듣기</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel p-lab v-waves" id="fourier" aria-labelledby="h-lab">
+    <div class="ph"><h2 id="h-lab">Fourier Lab <span>사인을 하나씩 쌓아 파형 만들기</span></h2></div>
     <div class="lab">
       <div class="lesson">
-        <p class="lead">Sine Garden의 소리는 모두 사인파를 더해서 만듭니다. 이 방법을 푸리에 합성이라고 합니다. 아래 순서대로 읽으면서 실험실에서 사인을 하나씩 더해 보세요.</p>
+        <p class="lead">세 파형 모두 아래 식 하나로 나타낼 수 있습니다. 배음 번호 n마다 크기 A<sub>n</sub>과 위상 φ<sub>n</sub>만 다릅니다.</p>
         <div class="formula">
           <math display="block" aria-label="x(t)는 n이 1부터 무한대까지, A n 곱하기 사인 괄호 2 파이 n f 0 t 더하기 파이 n 의 합">
             <mrow>
@@ -459,16 +692,16 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
           </math>
           <dl class="vars">
             <dt>f<sub>0</sub></dt><dd>기본 주파수. 누른 건반의 음높이</dd>
-            <dt>n</dt><dd>배음 번호. 합성기의 <b>배율</b></dd>
-            <dt>A<sub>n</sub></dt><dd>n번째 사인의 크기. 합성기의 <b>레벨</b></dd>
-            <dt>φ<sub>n</sub></dt><dd>n번째 사인의 시작 위치. 합성기의 <b>위상</b></dd>
+            <dt>n</dt><dd>배음 번호. 신시사이저의 <b>배율</b></dd>
+            <dt>A<sub>n</sub></dt><dd>n번째 사인의 크기. 신시사이저의 <b>레벨</b></dd>
+            <dt>φ<sub>n</sub></dt><dd>n번째 사인의 시작 위치. 신시사이저의 <b>위상</b></dd>
           </dl>
         </div>
         <ol class="steps">
           <li>
-            <h3>반복되는 소리는 사인의 합</h3>
-            <p>푸리에는 1807년 열 전도를 연구하다가, 일정하게 반복되는 신호는 기본 주파수의 정수배(배음)인 사인들을 더해 만들 수 있다고 주장했습니다. 사인마다 크기와 위상만 정하면 됩니다. 사인 하나에서 시작해 N을 한 칸씩 올려 보세요.</p>
-            <div class="try"><button class="trybtn" type="button" data-try="n1">사인 하나부터 보기</button></div>
+            <h3>사인을 하나씩 쌓으면</h3>
+            <p>N을 한 칸씩 올려 보세요. 사인이 하나 더해질 때마다 흰 선(합)이 점선(목표 파형)에 조금씩 다가갑니다. ‘들으며 쌓기’를 누르면 둥근 사인 소리가 점점 목표 파형의 음색으로 바뀌는 것도 들을 수 있습니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="n1">사인 하나부터 보기</button><button class="trybtn" type="button" data-try="demo">들으며 쌓기</button></div>
           </li>
           <li>
             <h3>파형마다 정해진 레시피</h3>
@@ -477,14 +710,14 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
               <table class="recipe">
                 <thead><tr><th scope="col">파형</th><th scope="col">쓰는 배음 n</th><th scope="col">진폭 A<sub>n</sub></th><th scope="col">위상 φ<sub>n</sub></th><th scope="col">음색</th></tr></thead>
                 <tbody>
-                  <tr><td>톱니파</td><td class="m">1, 2, 3, 4 … 전부</td><td class="m">1/n</td><td>짝수 n만 180°</td><td>밝고 거칠다</td></tr>
                   <tr><td>사각파</td><td class="m">1, 3, 5 … 홀수만</td><td class="m">1/n</td><td>모두 0°</td><td>속이 빈 듯하다</td></tr>
                   <tr><td>삼각파</td><td class="m">1, 3, 5 … 홀수만</td><td class="m">1/n²</td><td>n = 3, 7, 11 …만 180°</td><td>부드럽다</td></tr>
+                  <tr><td>톱니파</td><td class="m">1, 2, 3, 4 … 전부</td><td class="m">1/n</td><td>짝수 n만 180°</td><td>밝고 거칠다</td></tr>
                 </tbody>
               </table>
             </div>
             <p class="note">위상 180°는 그 사인을 뒤집어서(− 부호로) 더한다는 뜻입니다.</p>
-            <div class="try"><button class="trybtn" type="button" data-try="saw">톱니파</button><button class="trybtn" type="button" data-try="square">사각파</button><button class="trybtn" type="button" data-try="tri">삼각파</button></div>
+            <div class="try"><button class="trybtn" type="button" data-try="square">사각파</button><button class="trybtn" type="button" data-try="tri">삼각파</button><button class="trybtn" type="button" data-try="saw">톱니파</button></div>
           </li>
           <li>
             <h3>깁스 현상: 끝까지 남는 9%</h3>
@@ -494,34 +727,23 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
           <li>
             <h3>위상은 모양만 바꾼다</h3>
             <p>진폭은 그대로 두고 위상만 섞으면 파형 모양은 완전히 달라지지만, 귀에는 거의 같은 소리로 들립니다. 헬름홀츠는 1863년 음색이 주로 배음의 세기로 정해진다고 결론지었습니다. 다만 아주 낮은 음이나 큰 소리에서는 차이가 들리기도 합니다.</p>
-            <p class="note">‘합성기로 보내기’를 누르고 ‘C4 계속 울리기’를 켠 채 위상을 섞으면 바로 비교할 수 있습니다.</p>
+            <p class="note">‘계속 듣기’를 켠 채 ‘위상 섞기’를 누르면 바로 비교할 수 있습니다.</p>
             <div class="try"><button class="trybtn" type="button" data-try="scramble">위상 섞기</button></div>
           </li>
           <li>
             <h3>정수배가 아니면 종소리</h3>
-            <p>배율이 정수가 아니면 사인들의 합이 같은 모양으로 돌아오지 않습니다. 반복되지 않으니 음높이가 흐려지고 종이나 금속판처럼 들립니다. 합성기의 벨 프리셋은 0.56, 0.92, 1.19, 2.74 같은 비정수 배율로 만든 소리입니다.</p>
-            <div class="try"><button class="trybtn" type="button" data-try="bell">벨 프리셋 열기</button></div>
-          </li>
-          <li>
-            <h3>거꾸로 하면 푸리에 분석</h3>
-            <p>합성은 사인을 더해 소리를 만들고, 분석은 소리를 다시 사인으로 쪼갭니다. EQ 그래프 뒤의 파란 봉우리는 출력 소리를 FFT(고속 푸리에 변환)로 실시간 분해한 결과입니다. 봉우리 하나가 사인 하나입니다.</p>
-            <div class="try"><button class="trybtn" type="button" data-try="eq">EQ 스펙트럼 보기</button></div>
+            <p>배율이 정수가 아니면 사인들의 합이 같은 모양으로 돌아오지 않습니다. 반복되지 않으니 음높이가 흐려지고 종이나 금속판처럼 들립니다. 4단계 신시사이저의 벨 프리셋은 0.56, 0.92, 1.19, 2.74 같은 비정수 배율로 만든 소리입니다.</p>
+            <div class="try"><button class="trybtn" type="button" data-try="bell">4단계에서 벨 소리 열기</button></div>
           </li>
         </ol>
-        <p class="note">배운 내용은 소리 맞히기 미션에서 확인할 수 있습니다. <button class="trybtn" type="button" data-try="missions">미션 하러 가기</button></p>
       </div>
 
       <div class="labbox" id="labBox">
         <div class="labctl">
-          <div class="seg shape" role="group" aria-label="목표 파형">
-            <button type="button" data-shape="saw" aria-pressed="false">톱니파</button>
-            <button type="button" data-shape="square" aria-pressed="true">사각파</button>
-            <button type="button" data-shape="tri" aria-pressed="false">삼각파</button>
-          </div>
           <label class="knob nsl" for="labN"><span class="kt"><span>더한 배음 (n ≤ N)</span><output id="labNOut">N = 5</output></span><input id="labN" type="range" min="1" max="32" step="1" value="5"></label>
         </div>
         <div class="legend" aria-hidden="true">
-          <span><i class="lg-dash"></i>목표 파형</span>
+          <span><i class="lg-dash"></i><span id="lgTarget">목표 파형</span></span>
           <span><i class="lg-last" id="lgLast"></i><span id="lgLastTxt">방금 더한 사인</span></span>
           <span><i></i>사인들의 합</span>
         </div>
@@ -530,16 +752,21 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
         <div class="plab"><b>배음 레시피</b><span>막대는 진폭 A<sub>n</sub>, 아래 바늘은 위상 φ<sub>n</sub> (오른쪽 0°, 왼쪽 180°) · 눌러서 N 정하기</span></div>
         <canvas id="cvStem" class="screen" role="img" aria-label="배음별 진폭과 위상"></canvas>
         <div class="labactions">
-          <button id="labSend" class="btn primary" type="button">합성기로 보내기</button>
-          <button id="labDemo" class="btn" type="button" aria-pressed="false">들으며 쌓기</button>
-          <button id="labDrone" class="btn" type="button" aria-pressed="false">C4 계속 울리기</button>
+          <button id="labDemo" class="btn primary" type="button" aria-pressed="false">들으며 쌓기</button>
+          <button id="labDrone" class="btn" type="button" aria-pressed="false">계속 듣기</button>
           <button id="labScramble" class="btn" type="button">위상 섞기</button>
           <button id="labReset" class="btn" type="button" disabled>위상 되돌리기</button>
+          <button id="labSend" class="btn" type="button">나만의 소리로 가져가기</button>
         </div>
         <p class="hint" id="labStatus"></p>
       </div>
     </div>
   </section>
+
+  <nav class="stepnav v-waves" aria-label="단계 이동">
+    <button class="btn" type="button" data-goto="learn">← 1단계: 푸리에 변환</button>
+    <button class="btn primary big" type="button" data-goto="mission" data-done="waves">다음: 소리 맞히기 미션 →</button>
+  </nav>
 
   <section class="panel p-mlist v-mis" id="missions" aria-labelledby="h-mis">
     <div class="ph">
@@ -679,9 +906,10 @@ const hueOf = (i) => Math.round((205 + i * 137.508) % 360);
 const screenColor = (i) => `hsl(${hueOf(i)} 80% 68%)`;
 
 const state = { preset: 'saw', partials: [], envs: null, eq: DEFAULT_EQ(), eqBypass: false, band: 3, envTab: 'A', master: 80, octave: 4, hold: false };
-const lab = { shape: 'square', N: 5, phases: null, linked: null, drone: false, demo: 0, demoEnd: 0 };
-const dirty = { wave: true, harm: true, env: true, eq: true, resp: true, scope: true, lab: true, stem: true };
+const lab = { shape: 'square', N: 5, phases: null, drone: false, demo: 0, demoEnd: 0 };
+const dirty = { wave: true, harm: true, env: true, eq: true, resp: true, scope: true, lab: true, stem: true, cards: true, td: true, fd: true, det: true, scan: true };
 const markAllDirty = () => { for (const k in dirty) dirty[k] = true; };
+let view = 'learn';
 
 /* ---------- formatting ---------- */
 const minus = (s) => s.replace('-', '−');
@@ -954,7 +1182,7 @@ function setHold(on) {
 function panic(r) {
   if (ctx) for (const v of [...voices]) releaseVoice(v, r);
   held.clear(); sustained.clear(); codeHeld.clear(); ptrNote.clear();
-  stopDemo(); setDroneUI(false);
+  quietLessons();
   refreshKeys();
 }
 function releaseInputs() {
@@ -1066,7 +1294,6 @@ function loadPreset(key) {
   state.partials = pr.partials.map(makePartial);
   state.envs = { A: { ...pr.envs.A }, B: { ...pr.envs.B } };
   presetSel.value = key;
-  lab.linked = null; updateLabStatus();
   renderGenerators(); syncEnvUI(); save();
 }
 
@@ -1491,6 +1718,13 @@ function setMeter(peak) {
   if (peak >= .99) clipUntil = now + 700;
   meter.classList.toggle('clip', now < clipUntil);
 }
+function meterTick() {
+  if (!ctx || ctx.state !== 'running') { setMeter(0); return; }
+  anScope.getFloatTimeDomainData(scopeBuf);
+  let peak = 0;
+  for (let i = 0; i < scopeBuf.length; i++) { const a = Math.abs(scopeBuf[i]); if (a > peak) peak = a; }
+  setMeter(peak);
+}
 function drawScope() {
   dirty.scope = false;
   const { c, W, H } = setupCanvas(cvScope), mid = H / 2;
@@ -1578,7 +1812,7 @@ kb.addEventListener('pointercancel', endPtr);
 kb.addEventListener('contextmenu', (e) => e.preventDefault());
 
 window.addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || (view !== 'synth' && view !== 'mission')) return;
   const t = e.target, tag = t.tagName;
   if ((tag === 'INPUT' && t.type !== 'range') || tag === 'SELECT' || tag === 'TEXTAREA' || t.isContentEditable) return;
   if (e.code === 'KeyZ' || e.code === 'KeyX') { e.preventDefault(); if (!e.repeat) shiftOctave(e.code === 'KeyZ' ? -1 : 1); return; }
@@ -1613,8 +1847,294 @@ audioBtn.addEventListener('click', () => {
   if (ctx.state === 'running') { panic(.03); ctx.suspend(); } else ctx.resume();
 });
 
-/* ---------- Fourier lab ---------- */
-const LAB_MAX = 32, DRONE = 60;
+/* ---------- lesson tones ---------- */
+// The lesson screens play their own fixed voices, so listening there never changes the generators
+const TONE_NOTE = 60, TONE_ENV = { a: .02, d: .2, s: 1, r: .25 };
+const recipe = (list) => list.map(([ratio, level, phase = 0, on = true]) => ({ id: null, on, ratio, level, detune: 0, phase, env: 'A' }));
+const tones = [];
+const makeTone = () => { const t = { v: null, sig: '' }; tones.push(t); return t; };
+// levels follow the recipe live; new ratios or phases restart the voice
+function toneSet(t, parts) {
+  if (!ensureAudio()) return;
+  const sig = parts.map(p => `${p.ratio}/${p.phase}`).join(' ');
+  if (t.v && t.v.tRel === null && t.sig === sig) {
+    const now = ctx.currentTime;
+    t.v.out.gain.setTargetAtTime(voiceNorm(parts), now, .02);
+    t.v.parts.forEach((vp, i) => vp.lv.gain.setTargetAtTime(effLevel(parts[i], t.v.f), now, .015));
+    return;
+  }
+  toneStop(t, .03);
+  t.v = startVoice(TONE_NOTE, parts, { A: TONE_ENV, B: TONE_ENV }, true);
+  t.sig = sig;
+}
+function toneStop(t, r) { if (t.v && t.v.tRel === null) releaseVoice(t.v, r); t.v = null; }
+const shot = makeTone();
+let shotTimer = 0;
+function playOnce(parts) {
+  clearTimeout(shotTimer);
+  toneStop(shot, .05);
+  if (!ensureAudio()) return;
+  const v = startVoice(TONE_NOTE, parts, { A: TONE_ENV, B: TONE_ENV }, true);
+  shot.v = v;
+  shotTimer = setTimeout(() => { if (shot.v === v) toneStop(shot, .25); }, 1300);
+}
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const go = (el) => el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+
+/* ---------- step 1: two views of one sound ---------- */
+const FD_N = 8, F0 = 261.63;
+const learn = { amps: [1, 0, 0, 0, 0, 0, 0, 0], hot: -1, drag: false, listen: false, tone: makeTone() };
+const cvTD = $('#cvTD'), cvFD = $('#cvFD'), fdListen = $('#fdListen'), fdCount = $('#fdCount');
+const hzOf = (k) => Math.round(F0 * k);
+const learnParts = () => recipe(learn.amps.map((a, i) => [i + 1, a]));
+function fdChanged() { dirty.td = dirty.fd = true; if (learn.listen) toneSet(learn.tone, learnParts()); }
+function setListenUI(on) { learn.listen = on; fdListen.setAttribute('aria-pressed', on); fdListen.textContent = on ? '듣기 멈추기' : '계속 듣기'; }
+function drawTD() {
+  dirty.td = false;
+  const { c, W, H } = setupCanvas(cvTD), mid = H / 2, N = Math.max(200, Math.round(W));
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line; vline(c, W / 2, 0, H);
+  c.strokeStyle = TH.line2; hline(c, 0, W, mid);
+  const sum = new Float32Array(N + 1), comps = [];
+  learn.amps.forEach((a, i) => {
+    if (!(a > 0)) return;
+    const arr = new Float32Array(N + 1);
+    for (let j = 0; j <= N; j++) { arr[j] = a * Math.sin(TAU * (i + 1) * 2 * j / N); sum[j] += arr[j]; }
+    comps.push({ i, arr });
+  });
+  let peak = 1; for (const v of sum) peak = Math.max(peak, Math.abs(v));
+  const sc = mid * .84 / peak;
+  const plot = (arr) => { c.beginPath(); for (let j = 0; j <= N; j++) { const x = j / N * W, y = mid - arr[j] * sc; j ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); };
+  c.lineJoin = 'round';
+  for (const { i, arr } of comps) { const hot = i === learn.hot; c.globalAlpha = hot ? 1 : .45; c.lineWidth = hot ? 2 : 1; c.strokeStyle = screenColor(i); plot(arr); }
+  c.globalAlpha = 1; c.lineWidth = 2.4; c.strokeStyle = TH.trace; plot(sum);
+  c.font = `11px ${TH.body}`; c.fillStyle = TH.dim;
+  c.textAlign = 'left'; c.fillText('1주기', W / 2 + 6, H - 7);
+  c.textAlign = 'right'; c.fillText('시간 →', W - 8, H - 7);
+  if (!comps.length) { c.textAlign = 'center'; c.fillText('막대가 모두 0이면 소리도 없어요', W / 2, mid - 12); }
+  fdCount.textContent = comps.length ? `사인 ${comps.length}개의 합` : '소리 없음';
+}
+function fdLayout(W, H) {
+  const L = 34, R = 10, Tp = 18, B = 22, w = W - L - R, h = H - Tp - B, step = w / FD_N;
+  return { L, Tp, w, h, step, base: Tp + h, x: (i) => L + (i + .5) * step, y: (v) => Tp + (1 - v) * h,
+    i: (x) => clamp(Math.floor((x - L) / step), 0, FD_N - 1), v: (y) => clamp(1 - (y - Tp) / h, 0, 1) };
+}
+function drawFD() {
+  dirty.fd = false;
+  const { c, W, H } = setupCanvas(cvFD), G = fdLayout(W, H), bw = clamp(G.step * .44, 6, 28);
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line; hline(c, G.L, G.L + G.w, G.y(1)); hline(c, G.L, G.L + G.w, G.y(.5));
+  c.strokeStyle = TH.line2; hline(c, G.L, G.L + G.w, G.base);
+  c.font = `10px ${TH.mono}`; c.fillStyle = TH.dim; c.textAlign = 'right';
+  c.fillText('1', G.L - 8, G.y(1) + 3); c.fillText('0', G.L - 8, G.base + 3); c.fillText('Hz', G.L - 8, H - 6);
+  c.textAlign = 'center';
+  learn.amps.forEach((a, i) => {
+    const x = G.x(i), col = screenColor(i);
+    if (G.step >= 28 || i % 2 === 0) { c.fillStyle = TH.dim; c.fillText(String(hzOf(i + 1)), x, H - 6); }
+    // an empty slot still shows where a bar can be pulled up
+    c.globalAlpha = i === learn.hot ? .6 : .25; c.strokeStyle = col; c.setLineDash([3, 3]);
+    c.strokeRect(x - bw / 2 + .5, G.Tp + .5, bw - 1, G.h - 1); c.setLineDash([]); c.globalAlpha = 1;
+    if (a > 0) {
+      const y = G.y(a);
+      c.fillStyle = col; c.fillRect(x - bw / 2, y, bw, G.base - y);
+      c.fillStyle = TH.ink; c.fillText(a.toFixed(2), x, y - 5);
+    }
+  });
+}
+function fdPick(e) {
+  const p = pos(e, cvFD), G = fdLayout(p.W, p.H), i = G.i(p.x);
+  learn.hot = i;
+  learn.amps[i] = Math.round(G.v(p.y) * 20) / 20;
+  fdChanged();
+}
+cvFD.addEventListener('pointerdown', (e) => { e.preventDefault(); learn.drag = true; cvFD.setPointerCapture(e.pointerId); fdPick(e); });
+cvFD.addEventListener('pointermove', (e) => {
+  if (learn.drag) { fdPick(e); return; }
+  if (e.pointerType !== 'mouse') return;
+  const p = pos(e, cvFD), i = fdLayout(p.W, p.H).i(p.x);
+  if (i !== learn.hot) { learn.hot = i; dirty.td = dirty.fd = true; }
+});
+const fdEnd = (e) => { learn.drag = false; if (e.pointerType !== 'mouse') { learn.hot = -1; dirty.td = dirty.fd = true; } };
+cvFD.addEventListener('pointerup', fdEnd);
+cvFD.addEventListener('pointercancel', fdEnd);
+cvFD.addEventListener('pointerleave', () => { if (!learn.drag && learn.hot >= 0) { learn.hot = -1; dirty.td = dirty.fd = true; } });
+fdListen.addEventListener('click', () => {
+  if (learn.listen) { toneStop(learn.tone, .2); setListenUI(false); }
+  else { setListenUI(true); toneSet(learn.tone, learnParts()); }
+});
+document.querySelectorAll('[data-fd]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.fd;
+  if (k === 'one') learn.amps = learn.amps.map((_, i) => i ? 0 : 1);
+  else if (k === 'saw') learn.amps = learn.amps.map((_, i) => Math.round(100 / (i + 1)) / 100);
+  else {
+    const pick = new Set([0]), n = 2 + Math.floor(Math.random() * 3);
+    while (pick.size < n) pick.add(1 + Math.floor(Math.random() * (FD_N - 1)));
+    learn.amps = learn.amps.map((_, i) => pick.has(i) ? Math.round((.3 + Math.random() * .7) * 20) / 20 : 0);
+  }
+  learn.hot = -1; fdChanged();
+}));
+
+/* ---------- step 1: the detector ---------- */
+// a(k) = 2/T ∫ x(t)·sin(2πkt) dt over two periods of the fundamental. Integer harmonics come out exactly
+// and each peak falls to zero a quarter step either side.
+const DET_T = 2, K_MAX = 8.5, K_STEP = .05, K_COUNT = Math.round(K_MAX / K_STEP) + 1, SCAN_MS = 7000;
+const det = { mys: [[1, .9], [3, .5], [4, .3]], peak: 1, k: 2, scan: new Float32Array(K_COUNT).fill(NaN), scanning: false, t0: 0, last: -1, reveal: false, recon: false };
+const cvDet1 = $('#cvDet1'), cvDet2 = $('#cvDet2'), cvScan = $('#cvScan'), detK = $('#detK'), detKOut = $('#detKOut');
+const detVal = $('#detVal'), detSay = $('#detSay'), detPeaks = $('#detPeaks');
+const detScanBtn = $('#detScan'), detReconBtn = $('#detRecon'), detRevealBtn = $('#detReveal');
+const kIdx = (k) => Math.round(k / K_STEP);
+const detX = (t) => { let s = 0; for (const [n, a] of det.mys) s += a * Math.sin(TAU * n * t); return s; };
+function detValue(k) {
+  const M = 720; let s = 0;
+  for (let i = 0; i < M; i++) { const t = (i + .5) / M * DET_T; s += detX(t) * Math.sin(TAU * k * t); }
+  return 2 * s / M;
+}
+// NaN until the probe has visited that k
+const found = (n) => det.scan[kIdx(n)];
+const reconX = (t) => { let s = 0; for (let n = 1; n <= 8; n++) { const a = found(n); if (!Number.isNaN(a)) s += a * Math.sin(TAU * n * t); } return s; };
+function setMystery(list) {
+  det.mys = list; det.scan.fill(NaN); det.reveal = det.recon = false;
+  let pk = 0; for (let i = 0; i < 400; i++) pk = Math.max(pk, Math.abs(detX(i / 400)));
+  det.peak = Math.max(pk, .2);
+  detRevealBtn.setAttribute('aria-pressed', 'false'); detReconBtn.setAttribute('aria-pressed', 'false');
+  dirty.det = dirty.scan = true;
+}
+function setK(k) {
+  det.k = clamp(k, 0, K_MAX);
+  detK.value = det.k; paintRange(detK);
+  detKOut.textContent = `k = ${det.k.toFixed(2)}`;
+  dirty.det = dirty.scan = true;
+}
+function startScan() {
+  det.scan.fill(NaN); det.scanning = true; det.t0 = performance.now(); det.last = -1;
+  detScanBtn.setAttribute('aria-pressed', 'true'); detScanBtn.textContent = '스캔 멈추기';
+}
+function stopScan() {
+  if (!det.scanning) return;
+  det.scanning = false;
+  detScanBtn.setAttribute('aria-pressed', 'false'); detScanBtn.textContent = '자동 스캔';
+}
+function stepScan() {
+  const k = Math.min(K_MAX, (performance.now() - det.t0) / SCAN_MS * K_MAX), to = Math.min(K_COUNT - 1, kIdx(k));
+  for (let i = det.last + 1; i <= to; i++) det.scan[i] = detValue(i * K_STEP);
+  det.last = to;
+  setK(k);
+  if (k >= K_MAX) { stopScan(); checkLearnDone(); }
+}
+// canvas label on a dark backing so it stays readable over the traces
+function chip(c, text, x, y, color, align = 'left') {
+  const w = c.measureText(text).width, x0 = align === 'right' ? x - w : x;
+  c.fillStyle = TH.screen; c.globalAlpha = .8; c.fillRect(x0 - 4, y - 11, w + 8, 15); c.globalAlpha = 1;
+  c.fillStyle = color; c.textAlign = align; c.fillText(text, x, y);
+}
+function drawDet() {
+  dirty.det = false;
+  const k = det.k, a = detValue(k), N = Math.max(240, Math.round(cvDet1.clientWidth * 1.5));
+  const xs = new Float32Array(N + 1), ps = new Float32Array(N + 1);
+  for (let j = 0; j <= N; j++) { const t = DET_T * j / N; xs[j] = detX(t); ps[j] = Math.sin(TAU * k * t); }
+  const screenOf = (cv) => {
+    const { c, W, H } = setupCanvas(cv), mid = H / 2, sc = mid * .82 / Math.max(det.peak, 1);
+    c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+    c.lineWidth = 1; c.strokeStyle = TH.line; vline(c, W / 2, 0, H);
+    c.strokeStyle = TH.line2; hline(c, 0, W, mid);
+    c.lineJoin = 'round';
+    const plot = (f) => { c.beginPath(); for (let j = 0; j <= N; j++) { const x = j / N * W, y = mid - f(j) * sc; j ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); };
+    return { c, W, H, mid, sc, plot };
+  };
+  {
+    const { c, W, H, plot } = screenOf(cvDet1);
+    c.strokeStyle = TH.envB; c.lineWidth = 1.5; plot(j => ps[j]);
+    c.strokeStyle = TH.trace; c.lineWidth = 2.2; plot(j => xs[j]);
+    if (det.recon) { c.setLineDash([6, 4]); c.strokeStyle = TH.good; c.lineWidth = 2; plot(j => reconX(DET_T * j / N)); c.setLineDash([]); }
+    c.font = `600 11px ${TH.mono}`;
+    chip(c, 'x(t)', 8, 15, TH.trace);
+    chip(c, `sin(2π·${k.toFixed(2)}·t)`, 46, 15, TH.envB);
+    if (det.recon) {
+      let got = 0; for (let n = 1; n <= 8; n++) if (found(n) > .08) got++;
+      c.font = `600 11px ${TH.body}`; chip(c, `점선: 지금까지 찾은 사인 ${got}개로 다시 합성`, W - 8, H - 7, TH.good, 'right');
+    }
+  }
+  {
+    const { c, W, mid, sc, plot } = screenOf(cvDet2);
+    for (const up of [true, false]) {
+      c.beginPath(); c.moveTo(0, mid);
+      for (let j = 0; j <= N; j++) { const v = xs[j] * ps[j]; c.lineTo(j / N * W, mid - (up ? Math.max(v, 0) : Math.min(v, 0)) * sc); }
+      c.lineTo(W, mid); c.closePath();
+      c.fillStyle = up ? TH.good : TH.bad; c.globalAlpha = .38; c.fill(); c.globalAlpha = 1;
+    }
+    c.strokeStyle = TH.ink; c.globalAlpha = .7; c.lineWidth = 1.2; plot(j => xs[j] * ps[j]); c.globalAlpha = 1;
+    const ym = mid - a / 2 * sc;
+    c.setLineDash([6, 4]); c.strokeStyle = TH.envB; c.lineWidth = 1.6; hline(c, 0, W, ym); c.setLineDash([]);
+    c.font = `600 11px ${TH.body}`;
+    chip(c, `평균 ${minus((a / 2).toFixed(2))}`, W - 8, a >= 0 ? ym - 6 : ym + 15, TH.envB, 'right');
+  }
+  detVal.textContent = `a(k) = ${minus(a.toFixed(2))}`;
+  const n = Math.round(k), near = n >= 1 && Math.abs(k - n) < .03;
+  detSay.textContent = Math.abs(a) < .08
+    ? `거의 0이에요. 기본음의 ${k.toFixed(2)}배 주파수는 이 소리에 없어요. 초록과 빨강이 서로 지워졌습니다.`
+    : near ? `${n}배 주파수(${hzOf(n)} Hz)의 사인이 들어 있어요! 크기는 약 ${a.toFixed(2)}입니다. 곱이 거의 늘 양수라서 평균이 남았어요.`
+    : '근처에 사인이 있지만 주파수가 조금 어긋났어요. 곱의 일부가 서로 지워집니다. 봉우리 꼭대기를 찾아 k를 옮겨 보세요.';
+}
+function drawScan() {
+  dirty.scan = false;
+  const { c, W, H } = setupCanvas(cvScan), L = 34, R = 10, Tp = 12, B = 22, w = W - L - R, h = H - Tp - B;
+  const lo = -.35, hi = 1.1, X = (k) => L + k / K_MAX * w, Y = (v) => Tp + (hi - v) / (hi - lo) * h, y0 = Y(0);
+  c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+  c.lineWidth = 1; c.strokeStyle = TH.line; hline(c, L, L + w, Y(1)); hline(c, L, L + w, Y(.5));
+  c.strokeStyle = TH.line2; hline(c, L, L + w, y0);
+  c.font = `10px ${TH.mono}`; c.fillStyle = TH.dim; c.textAlign = 'right';
+  c.fillText('1', L - 8, Y(1) + 3); c.fillText('0', L - 8, y0 + 3); c.fillText('k', L - 8, H - 6);
+  c.textAlign = 'center';
+  for (let n = 1; n <= 8; n++) c.fillText(String(n), X(n), H - 6);
+  if (det.reveal) {
+    for (const [n, a] of det.mys) {
+      const x = X(n), y = Y(a);
+      c.fillStyle = TH.envB; c.globalAlpha = .14; c.fillRect(x - 8, y, 16, y0 - y); c.globalAlpha = 1;
+      c.strokeStyle = TH.envB; c.lineWidth = 1.5; c.strokeRect(x - 7.25, y + .75, 14.5, y0 - y - .75);
+    }
+  }
+  // visited stretches: area to zero, the line, and dots so single visits show
+  const runs = []; let cur = null;
+  for (let i = 0; i < K_COUNT; i++) { if (Number.isNaN(det.scan[i])) { cur = null; continue; } if (!cur) runs.push(cur = []); cur.push(i); }
+  c.lineJoin = 'round';
+  for (const run of runs) {
+    const px = (i) => X(i * K_STEP), py = (i) => Y(det.scan[i]);
+    c.beginPath(); c.moveTo(px(run[0]), y0);
+    for (const i of run) c.lineTo(px(i), py(i));
+    c.lineTo(px(run[run.length - 1]), y0); c.closePath();
+    c.fillStyle = TH.envA; c.globalAlpha = .18; c.fill(); c.globalAlpha = 1;
+    c.beginPath(); run.forEach((i, j) => j ? c.lineTo(px(i), py(i)) : c.moveTo(px(i), py(i)));
+    c.strokeStyle = TH.envA; c.lineWidth = 2; c.stroke();
+    if (run.length < 3) { c.fillStyle = TH.envA; for (const i of run) { c.beginPath(); c.arc(px(i), py(i), 2.5, 0, TAU); c.fill(); } }
+  }
+  const x = X(det.k), a = detValue(det.k);
+  c.strokeStyle = TH.envB; c.globalAlpha = .7; c.setLineDash([3, 3]); vline(c, x, Tp, Tp + h); c.setLineDash([]); c.globalAlpha = 1;
+  c.fillStyle = TH.envB; c.beginPath(); c.arc(x, clamp(Y(a), Tp, Tp + h), 4, 0, TAU); c.fill();
+  let all = true; for (let n = 1; n <= 8; n++) if (Number.isNaN(found(n))) all = false;
+  if (!all) detPeaks.textContent = 'k를 0부터 8까지 옮기거나 ‘자동 스캔’을 눌러 스펙트럼을 완성해 보세요.';
+  else {
+    const pk = []; for (let n = 1; n <= 8; n++) if (found(n) > .08) pk.push(n);
+    detPeaks.textContent = `봉우리: ${pk.map(n => `${n}배 ${found(n).toFixed(2)}`).join(' · ')}. 이 소리는 사인 ${pk.length}개의 합입니다. ‘다시 합성’으로 확인해 보세요.`;
+  }
+}
+detK.addEventListener('input', () => {
+  stopScan(); setK(+detK.value);
+  const i = kIdx(det.k); det.scan[i] = detValue(i * K_STEP);
+  checkLearnDone();
+});
+detScanBtn.addEventListener('click', () => { if (det.scanning) stopScan(); else startScan(); });
+$('#detListen').addEventListener('click', () => playOnce(recipe(det.mys)));
+detReconBtn.addEventListener('click', () => { det.recon = !det.recon; detReconBtn.setAttribute('aria-pressed', det.recon); dirty.det = true; });
+detRevealBtn.addEventListener('click', () => { det.reveal = !det.reveal; detRevealBtn.setAttribute('aria-pressed', det.reveal); dirty.scan = true; });
+$('#detNew').addEventListener('click', () => {
+  stopScan();
+  const ns = new Set(), count = 2 + Math.floor(Math.random() * 3);
+  while (ns.size < count) ns.add(1 + Math.floor(Math.random() * 8));
+  setMystery([...ns].sort((a, b) => a - b).map(n => [n, Math.round((.3 + Math.random() * .7) * 20) / 20]));
+});
+
+/* ---------- step 2: Fourier lab ---------- */
+const LAB_MAX = 32;
 // Partial sums of these recipes converge to target(x), x in radians of the fundamental
 const SHAPES = {
   saw: { use: () => true, amp: (n) => 1 / n, phase: (n) => n % 2 ? 0 : 180, peak: Math.PI / 2, jump: Math.PI,
@@ -1624,14 +2144,15 @@ const SHAPES = {
   tri: { use: (n) => n % 2 === 1, amp: (n) => 1 / (n * n), phase: (n) => n % 4 === 1 ? 0 : 180, peak: Math.PI * Math.PI / 8, jump: 0,
     target: (x) => Math.PI / 4 * Math.asin(Math.sin(x)) },
 };
-const labBox = $('#labBox'), labPanel = $('#fourier'), labN = $('#labN'), labNOut = $('#labNOut');
+const SHAPE_NAME = { square: '사각파', tri: '삼각파', saw: '톱니파' };
+const shapeRecipe = (S) => { const l = []; for (let n = 1; n <= LAB_MAX && l.length < MAX_P; n++) if (S.use(n)) l.push([n, S.amp(n), S.phase(n)]); return recipe(l); };
+const labBox = $('#labBox'), labN = $('#labN'), labNOut = $('#labNOut');
 const cvLab = $('#cvLab'), cvStem = $('#cvStem');
 const labCount = $('#labCount'), labErr = $('#labErr'), labGibbs = $('#labGibbs'), labStatus = $('#labStatus');
-const lgLast = $('#lgLast'), lgLastTxt = $('#lgLastTxt');
-const shapeBtns = [...document.querySelectorAll('.shape button')];
+const lgLast = $('#lgLast'), lgLastTxt = $('#lgLastTxt'), lgTarget = $('#lgTarget');
+const wcards = [...document.querySelectorAll('.wcard')];
 const demoBtn = $('#labDemo'), droneBtn = $('#labDrone'), resetBtn = $('#labReset');
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const go = (el) => el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+const labTone = makeTone();
 
 const phaseOf = (n) => lab.phases ? lab.phases.get(n) : SHAPES[lab.shape].phase(n);
 function lastSendable() {
@@ -1725,83 +2246,83 @@ function drawStem() {
     c.lineWidth = 1.6; c.strokeStyle = col; c.beginPath(); c.moveTo(x, G.dialY); c.lineTo(x + dr * Math.cos(a), G.dialY - dr * Math.sin(a)); c.stroke();
   }
 }
+// the three overview cards: the ideal wave on top, its first 16 harmonics below
+function drawCards() {
+  dirty.cards = false;
+  for (const el of wcards) {
+    const S = SHAPES[el.dataset.shape], { c, W, H } = setupCanvas(el.querySelector('canvas'));
+    const split = Math.round(H * .6), mid = split / 2, sc = mid * .72 / S.peak, N = Math.max(160, Math.round(W));
+    c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
+    c.lineWidth = 1; c.strokeStyle = TH.line2; hline(c, 0, W, mid);
+    c.strokeStyle = TH.line; hline(c, 0, W, split);
+    c.beginPath();
+    for (let j = 0; j <= N; j++) { const x = j / N * W, y = mid - S.target(2 * TAU * j / N) * sc; j ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.strokeStyle = TH.trace; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+    const base = H - 5, sh = base - split - 6, step = (W - 16) / 16;
+    let k = 0;
+    for (let n = 1; n <= 16; n++) {
+      const x = 8 + (n - .5) * step;
+      if (!S.use(n)) { c.fillStyle = TH.dim; c.globalAlpha = .5; c.beginPath(); c.arc(x, base, 1.2, 0, TAU); c.fill(); c.globalAlpha = 1; continue; }
+      c.strokeStyle = screenColor(k++); c.lineWidth = clamp(step * .4, 2, 4); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(x, base); c.lineTo(x, base - Math.max(1, S.amp(n) * sh)); c.stroke(); c.lineCap = 'butt';
+    }
+  }
+}
 
 function syncLabUI() {
   labN.value = lab.N; labNOut.textContent = `N = ${lab.N}`; paintRange(labN);
-  shapeBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.shape === lab.shape));
+  for (const el of wcards) { const on = el.dataset.shape === lab.shape; el.classList.toggle('on', on); el.querySelector('.wsel').setAttribute('aria-pressed', on); }
+  lgTarget.textContent = `목표 ${SHAPE_NAME[lab.shape]}`;
   resetBtn.disabled = !lab.phases;
+  updateLabStatus();
   dirty.lab = dirty.stem = true;
 }
+function labUsed() { const S = SHAPES[lab.shape], l = []; for (let n = 1; n <= lab.N && l.length < MAX_P; n++) if (S.use(n)) l.push(n); return l; }
 function updateLabStatus() {
-  if (!lab.linked) { labStatus.textContent = '‘합성기로 보내기’를 누르면 이 레시피가 위쪽 사인 오실레이터에 들어가고 N과 연결됩니다.'; return; }
   const end = lastSendable();
-  labStatus.textContent = '합성기와 연결됨: N을 바꾸면 합성기의 사인이 켜지고 꺼집니다. 소리가 유지되도록 엔벨로프도 바꿨습니다.'
-    + (lab.N > end ? ` 합성기는 사인 ${MAX_P}개까지라 n = ${end}까지만 들립니다.` : '');
+  labStatus.textContent = `‘나만의 소리로 가져가기’를 누르면 지금 쌓은 사인 ${labUsed().length}개가 4단계 신시사이저에 들어갑니다.`
+    + (lab.N > end ? ` 소리는 사인 ${MAX_P}개까지라 n = ${end}까지만 들립니다.` : '');
 }
-function syncRow(p) {
-  const row = genList.querySelector(`.grow[data-id="${p.id}"]`); if (!row) return;
-  row.classList.toggle('off', !p.on);
-  row.querySelector('.sw').setAttribute('aria-pressed', p.on);
+function labParts() {
+  const S = SHAPES[lab.shape], l = [];
+  for (let n = 1; n <= LAB_MAX && l.length < MAX_P; n++) if (S.use(n)) l.push([n, S.amp(n), phaseOf(n), n <= lab.N]);
+  return recipe(l);
 }
+const refreshLabTone = () => { if (lab.drone) toneSet(labTone, labParts()); };
 function sendToSynth() {
-  const S = SHAPES[lab.shape], wasDrone = lab.drone, list = [];
-  for (let n = 1; n <= LAB_MAX && list.length < MAX_P; n++) if (S.use(n)) list.push(n);
-  panic(.05);
-  lab.linked = new Map();
-  state.partials = list.map(n => { const p = makePartial({ ratio: n, level: S.amp(n), phase: phaseOf(n), on: n <= lab.N }); lab.linked.set(n, p.id); return p; });
+  const S = SHAPES[lab.shape];
+  stopDemo();
+  state.partials = labUsed().map(n => makePartial({ ratio: n, level: S.amp(n), phase: phaseOf(n) }));
   state.envs = { A: { a: .01, d: .2, s: .9, r: .3 }, B: { a: .01, d: .2, s: .9, r: .3 } };
   markCustom(); renderGenerators(); syncEnvUI(); save();
-  updateLabStatus();
-  if (wasDrone) setDrone(true);
-}
-function applyLabToSynth() {
-  if (!lab.linked) return;
-  let found = 0;
-  for (const [n, id] of lab.linked) {
-    const p = findP(id); if (!p) continue;
-    found++;
-    const on = n <= lab.N;
-    if (p.on !== on) { p.on = on; syncRow(p); }
-  }
-  if (!found) lab.linked = null;
-  else { liveLevels(); dirty.wave = dirty.harm = true; save(); }
-  updateLabStatus();
+  setView('synth');
 }
 function setLabN(n) {
   n = clamp(Math.round(n), 1, LAB_MAX);
   if (n === lab.N) return;
   stopDemo();
-  lab.N = n; syncLabUI(); applyLabToSynth();
+  lab.N = n; syncLabUI(); refreshLabTone();
 }
 function setShape(s) {
   stopDemo();
   lab.shape = s; lab.phases = null;
-  if (lab.linked) sendToSynth();
-  syncLabUI(); updateLabStatus();
-}
-function pushPhases() {
-  if (!lab.linked) return;
-  let any = false;
-  for (const [n, id] of lab.linked) { const p = findP(id); if (p) { p.phase = phaseOf(n); any = true; } }
-  if (!any) return;
-  renderGenerators(); markCustom(); save();
-  if (lab.drone) { const v = active.get(DRONE); if (v) releaseVoice(v, .03); noteOn(DRONE); }
+  syncLabUI(); refreshLabTone();
+  if (view === 'waves') markSeen(s);
 }
 function scramble() {
   lab.phases = new Map();
   for (let n = 1; n <= LAB_MAX; n++) lab.phases.set(n, Math.floor(Math.random() * 72) * 5);
-  pushPhases(); syncLabUI();
+  syncLabUI(); refreshLabTone();
 }
-function resetPhases() { lab.phases = null; pushPhases(); syncLabUI(); }
+function resetPhases() { lab.phases = null; syncLabUI(); refreshLabTone(); }
 function setDroneUI(on) {
   lab.drone = on;
   droneBtn.setAttribute('aria-pressed', on);
-  droneBtn.textContent = on ? 'C4 멈추기' : 'C4 계속 울리기';
+  droneBtn.textContent = on ? '듣기 멈추기' : '계속 듣기';
 }
 function setDrone(on) {
-  if (on) { if (!ensureAudio()) return; keyDown(DRONE); }
-  else if (lab.drone) { held.delete(DRONE); sustained.delete(DRONE); const v = active.get(DRONE); if (v) releaseVoice(v); refreshKeys(); }
-  setDroneUI(on);
+  if (on) { setDroneUI(true); toneSet(labTone, labParts()); }
+  else { toneStop(labTone, .25); setDroneUI(false); }
 }
 function stopDemo() {
   clearInterval(lab.demo); lab.demo = 0;
@@ -1811,22 +2332,26 @@ function stopDemo() {
 function startDemo() {
   stopDemo();
   if (!ensureAudio()) return;
-  lab.phases = null; lab.N = 1;
-  sendToSynth(); syncLabUI();
+  lab.phases = null; lab.N = 1; syncLabUI();
   setDrone(true);
   const S = SHAPES[lab.shape], end = lastSendable();
   lab.demo = setInterval(() => {
     let n = lab.N + 1;
     while (n <= end && !S.use(n)) n++;
     if (n > end) { stopDemo(); lab.demoEnd = setTimeout(() => setDrone(false), 1500); return; }
-    lab.N = n; syncLabUI(); applyLabToSynth();
+    lab.N = n; syncLabUI(); refreshLabTone();
   }, 450);
   demoBtn.setAttribute('aria-pressed', 'true'); demoBtn.textContent = '쌓기 멈추기';
 }
+// panic() has already released every voice; this resets the lesson buttons that were holding one
+function quietLessons() { for (const t of tones) t.v = null; stopDemo(); setDroneUI(false); setListenUI(false); }
 
-shapeBtns.forEach(b => b.addEventListener('click', () => setShape(b.dataset.shape)));
+wcards.forEach(el => {
+  el.querySelector('.wsel').addEventListener('click', () => setShape(el.dataset.shape));
+  el.querySelector('.wplay').addEventListener('click', () => { playOnce(shapeRecipe(SHAPES[el.dataset.shape])); markSeen(el.dataset.shape); });
+});
 labN.addEventListener('input', () => setLabN(+labN.value));
-$('#labSend').addEventListener('click', () => { stopDemo(); sendToSynth(); });
+$('#labSend').addEventListener('click', sendToSynth);
 demoBtn.addEventListener('click', () => { if (lab.demo) { stopDemo(); setDrone(false); } else startDemo(); });
 droneBtn.addEventListener('click', () => setDrone(!lab.drone));
 $('#labScramble').addEventListener('click', scramble);
@@ -1843,16 +2368,15 @@ function revealLab() {
 }
 document.querySelectorAll('[data-try]').forEach(b => b.addEventListener('click', () => {
   const t = b.dataset.try;
-  if (t === 'bell') { loadPreset('bell'); go($('.p-gen')); return; }
-  if (t === 'eq') { go($('#eq')); return; }
-  if (t === 'missions') { setView('mission'); return; }
+  if (t === 'bell') { setView('synth'); loadPreset('bell'); go($('.p-gen')); return; }
+  if (t === 'eq') { setView('synth'); go($('#eq')); return; }
   if (t === 'n1') setLabN(1);
+  else if (t === 'demo') startDemo();
   else if (t === 'scramble') scramble();
   else if (t === 'gibbs') { if (lab.shape === 'tri') setShape('square'); if (lab.phases) resetPhases(); setLabN(32); }
   else setShape(t);
   revealLab();
 }));
-document.querySelectorAll('.navlink').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); setView('synth'); go(document.querySelector(a.getAttribute('href'))); }));
 
 /* ---------- missions ---------- */
 // Similarity: per-harmonic level difference in dB (floor -40 dB, both spectra normalised to their loudest
@@ -1909,7 +2433,29 @@ const saveProgress = () => { try { localStorage.setItem(MSTORE, JSON.stringify(p
 const recOf = (m) => { const r = progress[m.id]; return r && typeof r === 'object' ? { best: Number(r.best) || 0, done: !!r.done } : { best: 0, done: false }; };
 
 const app = $('.app'), tabsNav = $('.tabs'), misCard = $('.p-mis'), misList = $('#misList'), cvMis = $('#cvMis'), hud = $('#hud');
-let view = 'synth';
+
+// step flow; storage keys keep the old Sine Garden names so saved sounds and mission progress survive the rename
+const FSTORE = 'sine-garden-flow-v1', VIEWS = ['learn', 'waves', 'mission', 'synth'];
+const HASH = { learn: '#learn', waves: '#waves', mission: '#missions', synth: '#studio' };
+const flow = { view: null, learn: false, waves: false, seen: [] };
+try {
+  const f = JSON.parse(localStorage.getItem(FSTORE) || 'null');
+  if (f && typeof f === 'object') {
+    flow.view = VIEWS.includes(f.view) ? f.view : null;
+    flow.learn = !!f.learn; flow.waves = !!f.waves;
+    flow.seen = Array.isArray(f.seen) ? f.seen.filter(x => Object.keys(SHAPES).includes(x)) : [];
+  }
+} catch (_) { /* storage unavailable */ }
+const saveFlow = () => { try { localStorage.setItem(FSTORE, JSON.stringify(flow)); } catch (_) { /* storage unavailable */ } };
+function renderTabs() {
+  const done = { learn: flow.learn, waves: flow.waves, mission: MISSIONS.every(m => recOf(m).done), synth: false };
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('done', done[t.dataset.view]));
+}
+function markDone(step) { if (!flow[step]) { flow[step] = true; saveFlow(); renderTabs(); } }
+// step 2 counts as done once all three waves were opened or played
+function markSeen(s) { if (!flow.seen.includes(s)) { flow.seen.push(s); saveFlow(); } if (flow.seen.length >= 3) markDone('waves'); }
+// step 1 counts as done once the probe has visited every integer k
+function checkLearnDone() { for (let n = 1; n <= 8; n++) if (Number.isNaN(found(n))) return; markDone('learn'); }
 const curM = () => MISSIONS[mission.idx];
 const targetVisible = () => { const m = curM(); return (!m.hidden && !mission.hard) || mission.hint; };
 const tolOf = (m) => (100 - m.thr) / 100 * SCALE_DB;
@@ -1961,6 +2507,7 @@ function renderMissionList() {
   }).join('');
   $('#misDone').textContent = `${done} / ${MISSIONS.length} 성공`;
   $('#tabMis').textContent = `${done} / ${MISSIONS.length}`;
+  renderTabs();
 }
 function renderMissionDetail() {
   const m = curM();
@@ -2007,11 +2554,12 @@ function updateMission() {
   verdict.textContent = pass ? '성공' : over ? '사인이 너무 많아요' : r.pct >= m.thr - 10 ? '거의 다 왔어요' : '도전 중';
   verdict.classList.toggle('pass', pass);
   $('#misFeedback').textContent = pass
-    ? `성공! 목표 소리와 ${shown}% 닮았습니다.${mission.idx < MISSIONS.length - 1 ? ' 다음 미션에 도전해 보세요.' : ' 모든 미션을 마쳤습니다.'}`
+    ? `성공! 목표 소리와 ${shown}% 닮았습니다.${mission.idx < MISSIONS.length - 1 ? ' 다음 미션에 도전해 보세요.' : ' 마지막 미션이에요. 이제 4단계에서 나만의 소리를 만들어 보세요.'}`
     : over ? `사인을 ${m.maxSines}개 이하로 줄이세요. 지금 ${r.count}개를 켜 두었어요.`
     : targetVisible() ? feedbackText(r)
     : '목표 소리와 내 소리를 번갈아 들으며 비교해 보세요. 막히면 힌트를 누르세요.';
-  $('#misNext').hidden = !(pass && mission.idx < MISSIONS.length - 1);
+  $('#misNext').hidden = !pass;
+  $('#misNext').textContent = mission.idx < MISSIONS.length - 1 ? '다음 미션 →' : '4단계: 나만의 소리 만들기 →';
   const show = targetVisible(), mt = $('#misMatch');
   mt.hidden = !show;
   if (show) {
@@ -2108,23 +2656,25 @@ function play(kind) {
 }
 function resetToSine() {
   panic(.05);
-  lab.linked = null; updateLabStatus();
   state.partials = [makePartial({ ratio: 1, level: 1 })];
   state.envs = { A: { ...SUSTAIN_ENV }, B: { ...SUSTAIN_ENV } };
   markCustom(); renderGenerators(); syncEnvUI(); save();
 }
-function setView(v) {
-  if (v === view) return;
+function setView(v, quiet) {
+  if (v === view || !VIEWS.includes(v)) return;
+  panic(.05); stopAudition(); stopScan();
   view = v;
   app.dataset.view = v;
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === v));
-  if (v !== 'mission') stopAudition();
-  try { history.replaceState(null, '', v === 'mission' ? '#missions' : location.pathname + location.search); } catch (_) { /* sandboxed */ }
-  if (tabsNav.getBoundingClientRect().top < 0) tabsNav.scrollIntoView();
+  try { history.replaceState(null, '', HASH[v]); } catch (_) { /* sandboxed */ }
+  flow.view = v; saveFlow();
+  if (v === 'waves') markSeen(lab.shape);
+  if (!quiet && tabsNav.getBoundingClientRect().top < 0) tabsNav.scrollIntoView();
   markAllDirty(); updateHud();
   if (v === 'mission') revealCurrentItem();
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setView(t.dataset.view)));
+document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => { if (b.dataset.done) markDone(b.dataset.done); setView(b.dataset.goto); }));
 let gaugeInView = false;
 function updateHud() {
   const on = view === 'mission' && !gaugeInView;
@@ -2143,7 +2693,10 @@ $('#misHint').addEventListener('click', () => { mission.hint = !mission.hint; re
 $('#misHard').addEventListener('click', () => { mission.hard = !mission.hard; renderMissionDetail(); dirty.harm = true; });
 $('#misReset').addEventListener('click', resetToSine);
 $('#misBuild').addEventListener('click', () => go($('.p-gen')));
-$('#misNext').addEventListener('click', () => { selectMission(mission.idx + 1); if (misCard.getBoundingClientRect().top < 0) go(misCard); });
+$('#misNext').addEventListener('click', () => {
+  if (mission.idx >= MISSIONS.length - 1) { setView('synth'); return; }
+  selectMission(mission.idx + 1); if (misCard.getBoundingClientRect().top < 0) go(misCard);
+});
 $('#hudGo').addEventListener('click', () => go(misCard));
 let clearArmed = 0;
 $('#misClear').addEventListener('click', (e) => {
@@ -2159,20 +2712,33 @@ if (mq.addEventListener) mq.addEventListener('change', readTheme);
 new MutationObserver(readTheme).observe(root, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(markAllDirty);
 const ro = new ResizeObserver(() => { markAllDirty(); if (kb.clientWidth !== kbWidth) renderKeyboard(); });
-[cvWave, cvHarm, cvScope, cvEnv, cvEq, cvLab, cvStem, cvMis, kb.parentElement].forEach(el => ro.observe(el));
+[cvWave, cvHarm, cvScope, cvEnv, cvEq, cvLab, cvStem, cvMis, cvTD, cvFD, cvDet1, cvDet2, cvScan, ...wcards.map(el => el.querySelector('canvas')), kb.parentElement].forEach(el => ro.observe(el));
 
 /* ---------- main loop ---------- */
 let prevVoices = 0;
+// only the screens on view are drawn; setView marks everything dirty for the next one
 function frame() {
   const running = ctx && ctx.state === 'running';
-  if (dirty.wave) drawWave();
-  if (dirty.harm) { drawHarm(); updateMission(); }
-  if (dirty.env || voices.length || prevVoices) drawEnv();
-  prevVoices = voices.length;
-  if (dirty.eq || running) drawEq();
-  if (dirty.scope || running) drawScope();
-  if (dirty.lab) drawLab();
-  if (dirty.stem) drawStem();
+  if (view === 'learn') {
+    if (det.scanning) stepScan();
+    if (dirty.td) drawTD();
+    if (dirty.fd) drawFD();
+    if (dirty.det) drawDet();
+    if (dirty.scan) drawScan();
+    meterTick();
+  } else if (view === 'waves') {
+    if (dirty.cards) drawCards();
+    if (dirty.lab) drawLab();
+    if (dirty.stem) drawStem();
+    meterTick();
+  } else {
+    if (dirty.wave) drawWave();
+    if (dirty.harm) { drawHarm(); updateMission(); }
+    if (dirty.env || voices.length || prevVoices) drawEnv();
+    prevVoices = voices.length;
+    if (dirty.eq || running) drawEq();
+    if (dirty.scope || running) drawScope();
+  }
   requestAnimationFrame(frame);
 }
 
@@ -2188,13 +2754,14 @@ renderKeyboard();
 updateAudioUI();
 updateVoiceCount();
 syncLabUI();
-updateLabStatus();
+setMystery(det.mys);
+setK(det.k);
 mission.idx = Math.max(0, MISSIONS.findIndex(m => !recOf(m).done));
 renderMissionList();
 renderMissionDetail();
 requestAnimationFrame(frame);
-if (location.hash === '#missions') setView('mission');
-else if (location.hash === '#fourier') requestAnimationFrame(() => $('#fourier').scrollIntoView());
+// first visit starts at step 1; later visits return to the last step (a link's #hash wins)
+setView({ '#learn': 'learn', '#waves': 'waves', '#fourier': 'waves', '#missions': 'mission', '#studio': 'synth' }[location.hash] || flow.view || 'learn', true);
 })();
 </script>
 </body>
