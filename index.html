@@ -242,6 +242,11 @@ input[type="range"]:disabled{opacity:.35;cursor:not-allowed}
 .flow li:not(:last-child)::after{content:"→";color:var(--line)}
 .flow li b{font-weight:500;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
 
+/* credit line, last on every screen (order keeps it below the reordered mission panels) */
+.credit{grid-column:1/-1;order:9;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin-top:6px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+.credit a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.credit a:hover{color:var(--accent)}
+
 /* fourier lab */
 .p-lab{grid-column:1/-1}
 .lab{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px 32px;align-items:start}
@@ -818,6 +823,11 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
       <li><b>리미터</b></li>
       <li><b>마스터</b></li>
     </ol>
+  </footer>
+
+  <footer class="credit">
+    <span>제작 여광재 (온양고등학교)</span>
+    <a href="https://github.com/RuneDaeg/fourier-garden">GitHub 소스 코드</a>
   </footer>
 </div>
 
