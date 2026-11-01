@@ -34,6 +34,8 @@
   --danger:#D93D42;
   --good:#18804A;
   --good-ink:#FFFFFF;
+  --screen-good:#5BD59B;
+  --screen-bad:#FF7B72;
   --swatch-l:48%;
   --swatch-ink:#FFFFFF;
   --key-white:#FCFCFD;
@@ -101,6 +103,14 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);background:var(--we
 .meter.clip i{background:var(--danger)}
 .pill{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .pill.on{color:var(--ink);border-color:var(--accent)}
+
+/* view tabs: the synth and the missions are separate screens that share the generators */
+.tabs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:2px 4px;border-bottom:1px solid var(--line)}
+.tab{border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;color:var(--muted);font:600 14px var(--f-body);padding:8px 14px 10px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .pill{font-size:10.5px;padding:1px 7px}
+.app[data-view="synth"] > .v-mis,.app[data-view="mission"] > .v-synth,.app[data-view="mission"] .f-preset{display:none}
 
 /* panels */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;min-width:0;display:flex;flex-direction:column;gap:12px}
@@ -267,15 +277,22 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
   .lesson{max-width:none}
 }
 
-/* missions */
-.p-mis{grid-column:1/-1}
-.mis{display:grid;grid-template-columns:minmax(220px,290px) minmax(0,1fr);gap:20px 28px;align-items:start}
-.mlist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+/* missions: list across the top, generators on the left (same place as in the synth view), mission card on the right */
+.p-mlist{grid-column:1/-1;order:1}
+.p-mis{grid-column:1/-1;order:2}
+.app[data-view="mission"] > .p-gen{order:3;align-self:start}
+@media (min-width:1240px){
+  .p-mis{grid-column:span 5;order:4}
+  #misBuild{display:none}
+}
+@media (min-width:1240px) and (min-height:720px){.p-mis{position:sticky;top:12px;align-self:start}}
+.mlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.mlist li{display:grid}
 .mitem{width:100%;display:grid;grid-template-columns:26px minmax(0,1fr) 20px;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 10px;cursor:pointer;font:500 13px var(--f-body)}
 .mitem:hover{border-color:var(--accent)}
 .mitem[aria-current="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .mitem .mn{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font:600 11px var(--f-mono);color:var(--muted)}
-.mitem .mt{display:flex;flex-direction:column;min-width:0}
+.mitem .mt{display:flex;flex-direction:column;min-width:0;word-break:keep-all}
 .mitem small{font:400 11px var(--f-mono);color:var(--muted)}
 .mitem .mc{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:transparent}
 .mitem.done .mc{background:var(--good);color:var(--good-ink)}
@@ -297,9 +314,12 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
 .gbar.pass i{background:var(--good)}
 .gbar b{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);transform:translateX(-1px)}
 .mfb{margin:0;font-size:13px;line-height:1.55}
-.legend i.lg-t::after{top:2px;bottom:2px;left:9px;right:9px;border:1.5px solid var(--env-b);border-radius:1px}
-.legend i.lg-s::after{top:2px;bottom:2px;left:9px;right:9px;border:0;background:var(--env-a);border-radius:1px}
-#cvMis{height:200px}
+.legend i.lg-t::after{top:2px;bottom:1px;left:7px;right:7px;border:1.5px solid var(--env-b);border-radius:1px}
+.legend i.lg-s::after{top:4px;bottom:1px;left:11px;right:11px;border:0;background:var(--env-a);border-radius:1px}
+.legend i.lg-ok::after{top:2px;bottom:1px;left:7px;right:7px;border:1.5px solid var(--screen-good);border-radius:1px;background:linear-gradient(to right,transparent 4px,var(--screen-good) 4px calc(100% - 4px),transparent calc(100% - 4px))}
+.lgk{font-weight:600}
+.pill.ok{color:var(--good);border-color:var(--good)}
+#cvMis{height:210px}
 .hud{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 22px rgba(0,0,0,.14);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 .hud-in{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
 .hud-t{font-weight:600;font-size:13px;flex:1 1 180px;min-width:0}
@@ -309,8 +329,8 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
 .hud-b{display:flex;flex-wrap:wrap;gap:6px}
 :root.hud-on body{padding-bottom:130px}
 @media (max-width:860px){
-  .mis{grid-template-columns:minmax(0,1fr)}
-  .mlist{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}
+  .mlist{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(148px,44%);overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;scrollbar-width:thin}
+  .mlist li{scroll-snap-align:start}
   .mitem{grid-template-columns:22px minmax(0,1fr) 16px;gap:8px;padding:7px 8px;font-size:12.5px}
   .mitem .mn{width:22px;height:22px}
   .mitem .mc{width:16px;height:16px;font-size:10px}
@@ -321,20 +341,25 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
 </head>
 <body>
 
-<div class="app">
+<div class="app" data-view="synth">
   <header class="top">
     <div class="brand">
       <h1>Sine Garden</h1>
-      <p>사인파를 겹쳐 소리를 만드는 가산 합성기 · <a class="navlink" href="#fourier">푸리에 합성 배우기 ↓</a> · <a class="navlink" href="#missions">소리 맞히기 미션 ↓</a></p>
+      <p>사인파를 겹쳐 소리를 만드는 가산 합성기 · <a class="navlink" href="#fourier">푸리에 합성 배우기 ↓</a></p>
     </div>
     <div class="topctl">
-      <label class="field" for="preset"><span>프리셋</span><select id="preset"></select></label>
+      <label class="field f-preset" for="preset"><span>프리셋</span><select id="preset"></select></label>
       <label class="field vol" for="vol"><span>마스터</span><input id="vol" type="range" min="0" max="100" step="1" value="80"><output id="volOut">−3.9 dB</output></label>
       <div class="meter" id="meter" aria-hidden="true"><i id="meterBar"></i><b id="meterPeak"></b></div>
       <button id="audioBtn" class="btn primary" type="button">소리 켜기</button>
       <span id="audioState" class="pill">꺼짐</span>
     </div>
   </header>
+
+  <nav class="tabs" role="tablist" aria-label="화면 선택">
+    <button class="tab" type="button" role="tab" data-view="synth" aria-selected="true">신시사이저</button>
+    <button class="tab" type="button" role="tab" data-view="mission" aria-selected="false">소리 맞히기 미션 <span class="pill" id="tabMis">0 / 8</span></button>
+  </nav>
 
   <section class="panel p-gen" aria-labelledby="h-gen">
     <div class="ph">
@@ -349,7 +374,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     </div>
   </section>
 
-  <section class="panel p-prev" aria-labelledby="h-prev">
+  <section class="panel p-prev v-synth" aria-labelledby="h-prev">
     <div class="ph"><h2 id="h-prev">Preview <span>합성 결과 보기</span></h2></div>
     <div class="pblock">
       <div class="plab"><b>합성 파형</b><span>기본음 두 주기 · 흰 선이 합계</span></div>
@@ -365,7 +390,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     </div>
   </section>
 
-  <section class="panel p-env" aria-labelledby="h-env">
+  <section class="panel p-env v-synth" aria-labelledby="h-env">
     <div class="ph">
       <h2 id="h-env">Envelope <span>소리의 시작과 끝</span></h2>
       <div class="envtabs" role="group" aria-label="편집할 엔벨로프">
@@ -383,7 +408,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     <p class="hint" id="envUse"></p>
   </section>
 
-  <section class="panel p-eq" id="eq" aria-labelledby="h-eq">
+  <section class="panel p-eq v-synth" id="eq" aria-labelledby="h-eq">
     <div class="ph">
       <h2 id="h-eq">Equalizer <span>6밴드 파라메트릭 EQ</span></h2>
       <div class="tools">
@@ -402,7 +427,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     </div>
   </section>
 
-  <section class="panel p-keys" aria-labelledby="h-keys">
+  <section class="panel p-keys v-synth" aria-labelledby="h-keys">
     <div class="kbbar">
       <div class="ph"><h2 id="h-keys">Keyboard <span>건반</span></h2></div>
       <p class="hint">컴퓨터 키보드 <kbd>A</kbd>–<kbd>K</kbd> 흰 건반, <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> 검은 건반, <kbd>Z</kbd> <kbd>X</kbd> 옥타브 이동</p>
@@ -416,7 +441,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     <div id="kb" role="group" aria-label="화면 건반"></div>
   </section>
 
-  <section class="panel p-lab" id="fourier" aria-labelledby="h-lab">
+  <section class="panel p-lab v-synth" id="fourier" aria-labelledby="h-lab">
     <div class="ph"><h2 id="h-lab">Fourier Lab <span>푸리에 합성 배우기</span></h2></div>
     <div class="lab">
       <div class="lesson">
@@ -516,45 +541,46 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     </div>
   </section>
 
-  <section class="panel p-mis" id="missions" aria-labelledby="h-mis">
+  <section class="panel p-mlist v-mis" id="missions" aria-labelledby="h-mis">
     <div class="ph">
-      <h2 id="h-mis">Missions <span>소리 맞히기 미션</span></h2>
+      <h2 id="h-mis">Missions <span>목표 소리를 듣고 사인을 쌓아 똑같이 만들어 보세요</span></h2>
       <div class="tools">
         <span class="pill" id="misDone">0 / 8 성공</span>
         <button id="misHard" class="btn" type="button" aria-pressed="false">목표 스펙트럼 숨기기</button>
         <button id="misClear" class="btn" type="button">기록 지우기</button>
       </div>
     </div>
-    <p class="hint">목표 소리를 듣고 위쪽 사인 오실레이터로 비슷한 소리를 만드세요. 배음마다 세기(dB)를 비교해 닮은 정도를 계산합니다. 귀가 거의 구분하지 못하는 위상과, 음색과는 따로인 엔벨로프는 채점하지 않습니다.</p>
-    <div class="mis">
-      <ol class="mlist" id="misList"></ol>
-      <div class="mdetail">
-        <div><span class="eyebrow" id="misNum">미션 1 / 8</span><h3 id="misTitle"></h3></div>
-        <p class="mgoal" id="misGoal"></p>
-        <p class="mwhy"><b>배울 점</b><span id="misWhy"></span></p>
-        <div class="rules" id="misRules"></div>
-        <div class="mact">
-          <button id="misTarget" class="btn primary" type="button">목표 듣기</button>
-          <button id="misMine" class="btn" type="button">내 소리 듣기</button>
-          <button id="misAB" class="btn" type="button">번갈아 듣기</button>
-          <button id="misHint" class="btn" type="button" aria-pressed="false">힌트</button>
-          <button id="misReset" class="btn" type="button">사인 하나로 시작</button>
-          <button id="misBuild" class="btn" type="button">만들러 가기 ↑</button>
-        </div>
-        <p class="hintbox" id="misHintText" hidden></p>
-        <div class="gauge" aria-live="polite">
-          <div class="gnum"><output id="misPct">0%</output><span class="pill verdict" id="misVerdict">도전 중</span><span class="hint" id="misNow"></span></div>
-          <div class="gbar" id="misBar"><i id="misFill"></i><b id="misThr"></b></div>
-          <p class="mfb" id="misFeedback"></p>
-        </div>
-        <div class="legend" aria-hidden="true"><span><i class="lg-t"></i>목표</span><span><i class="lg-s"></i>내 소리</span><span>세로축은 dB · 10 dB 낮으면 진폭은 약 1/3</span></div>
-        <canvas id="cvMis" class="screen" role="img" aria-label="목표와 내 소리의 배음 세기 비교"></canvas>
-        <div><button id="misNext" class="btn primary" type="button" hidden>다음 미션 →</button></div>
+    <ol class="mlist" id="misList"></ol>
+  </section>
+
+  <section class="panel p-mis v-mis" aria-labelledby="misTitle">
+    <div class="mdetail">
+      <div><span class="eyebrow" id="misNum">미션 1 / 8</span><h3 id="misTitle"></h3></div>
+      <div class="rules" id="misRules"></div>
+      <p class="mgoal" id="misGoal"></p>
+      <div class="mact">
+        <button id="misTarget" class="btn primary" type="button">목표 듣기</button>
+        <button id="misMine" class="btn" type="button">내 소리 듣기</button>
+        <button id="misAB" class="btn" type="button">번갈아 듣기</button>
+        <button id="misHint" class="btn" type="button" aria-pressed="false">힌트</button>
+        <button id="misReset" class="btn" type="button">사인 하나로 시작</button>
+        <button id="misBuild" class="btn" type="button">사인 고치기 ↓</button>
       </div>
+      <p class="hintbox" id="misHintText" hidden></p>
+      <div class="gauge" id="misGauge" aria-live="polite">
+        <div class="gnum"><output id="misPct">0%</output><span class="pill verdict" id="misVerdict">도전 중</span><span class="pill" id="misMatch"></span><span class="hint" id="misNow"></span></div>
+        <div class="gbar" id="misBar"><i id="misFill"></i><b id="misThr"></b></div>
+        <p class="mfb" id="misFeedback"></p>
+      </div>
+      <div class="legend" id="misLegend" aria-hidden="true"></div>
+      <canvas id="cvMis" class="screen" role="img" aria-label="목표와 내 소리의 배음 세기를 겹쳐 비교한 그래프"></canvas>
+      <p class="hint">세로축은 dB입니다. 10 dB 낮으면 진폭은 약 1/3입니다. 위상과 엔벨로프는 채점하지 않습니다.</p>
+      <div><button id="misNext" class="btn primary" type="button" hidden>다음 미션 →</button></div>
+      <p class="mwhy"><b>배울 점</b><span id="misWhy"></span></p>
     </div>
   </section>
 
-  <footer class="flow">
+  <footer class="flow v-synth">
     <span>Signal flow</span>
     <ol>
       <li><b>사인 × N</b></li>
@@ -575,8 +601,7 @@ math{font-size:1.25em;font-family:"STIX Two Math","Cambria Math","Latin Modern M
     <div class="hud-b">
       <button class="btn" id="hudTarget" type="button">목표 듣기</button>
       <button class="btn" id="hudMine" type="button">내 소리</button>
-      <button class="btn" id="hudGo" type="button">미션 보기 ↓</button>
-      <button class="btn" id="hudClose" type="button" aria-label="미션 바 닫기">×</button>
+      <button class="btn" id="hudGo" type="button">점수 보기 ↑</button>
     </div>
   </div>
 </div>
@@ -687,7 +712,7 @@ let TH = {};
 function readTheme() {
   const cs = getComputedStyle(root), g = (n) => cs.getPropertyValue(n).trim();
   TH = { screen: g('--screen'), line: g('--screen-line'), line2: g('--screen-line-2'), ink: g('--screen-ink'), dim: g('--screen-dim'),
-         trace: g('--trace'), envA: g('--env-a'), envB: g('--env-b'), mono: g('--f-mono') || 'monospace', body: g('--f-body') || 'sans-serif' };
+         trace: g('--trace'), envA: g('--env-a'), envB: g('--env-b'), good: g('--screen-good'), bad: g('--screen-bad'), mono: g('--f-mono') || 'monospace', body: g('--f-body') || 'sans-serif' };
   markAllDirty();
 }
 
@@ -1169,7 +1194,7 @@ function drawWave() {
 let harmDrag = -1, harmHover = -1;
 function harmLayout(W, H) {
   const L = 38, R = 12, Tp = 14, B = 20, w = W - L - R, h = H - Tp - B;
-  const maxR = ghostTargets().reduce((m, [r]) => Math.max(m, r), state.partials.reduce((m, p) => Math.max(m, p.ratio), 0));
+  const maxR = state.partials.reduce((m, p) => Math.max(m, p.ratio), 0);
   const xMax = Math.max(8, Math.ceil(maxR + .5));
   return { L, Tp, w, h, xMax, x: (r) => L + (r / xMax) * w, y: (v) => Tp + (1 - v) * h, r: (x) => (x - L) / w * xMax, v: (y) => clamp(1 - (y - Tp) / h, 0, 1) };
 }
@@ -1192,16 +1217,6 @@ function drawHarm() {
   for (let k = step; k <= L.xMax; k += step) { const x = L.x(k); c.strokeStyle = TH.line; vline(c, x, L.Tp, L.y(0)); c.fillStyle = TH.dim; c.fillText(String(k), x, H - 6); }
   c.textAlign = 'right'; c.fillText('×f', L.L - 6, H - 6);
   c.strokeStyle = TH.line2; hline(c, L.L, L.L + L.w, L.y(0));
-  const ghosts = ghostTargets();
-  if (ghosts.length) {
-    c.strokeStyle = TH.envB; c.lineWidth = 1.5;
-    for (const [r, a] of ghosts) {
-      const x = L.x(r), y = L.y(a);
-      c.setLineDash([2, 3]); c.beginPath(); c.moveTo(x, L.y(0)); c.lineTo(x, y + 7); c.stroke(); c.setLineDash([]);
-      c.beginPath(); c.arc(x, y, 7, 0, TAU); c.stroke();
-    }
-    c.font = `11px ${TH.body}`; c.fillStyle = TH.envB; c.textAlign = 'right'; c.fillText('○ 미션 목표', W - 12, L.Tp + 4);
-  }
   const sticks = stickPositions(L), focus = harmDrag >= 0 ? harmDrag : harmHover;
   c.lineCap = 'round';
   for (const s of sticks) {
@@ -1830,14 +1845,14 @@ document.querySelectorAll('[data-try]').forEach(b => b.addEventListener('click',
   const t = b.dataset.try;
   if (t === 'bell') { loadPreset('bell'); go($('.p-gen')); return; }
   if (t === 'eq') { go($('#eq')); return; }
-  if (t === 'missions') { go(misPanel); return; }
+  if (t === 'missions') { setView('mission'); return; }
   if (t === 'n1') setLabN(1);
   else if (t === 'scramble') scramble();
   else if (t === 'gibbs') { if (lab.shape === 'tri') setShape('square'); if (lab.phases) resetPhases(); setLabN(32); }
   else setShape(t);
   revealLab();
 }));
-document.querySelectorAll('.navlink').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); go(document.querySelector(a.getAttribute('href'))); }));
+document.querySelectorAll('.navlink').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); setView('synth'); go(document.querySelector(a.getAttribute('href'))); }));
 
 /* ---------- missions ---------- */
 // Similarity: per-harmonic level difference in dB (floor -40 dB, both spectra normalised to their loudest
@@ -1887,16 +1902,17 @@ const MISSIONS = [
     target: [[1, .7], [2, 1], [3, .35], [5, .5]] },
 ];
 const MSTORE = 'sine-garden-missions-v1';
-const mission = { idx: 0, engaged: false, hint: false, hard: false, auditions: [] };
+const mission = { idx: 0, hint: false, hard: false, auditions: [] };
 let progress = {};
 try { const p = JSON.parse(localStorage.getItem(MSTORE) || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) progress = p; } catch (_) { /* storage unavailable */ }
 const saveProgress = () => { try { localStorage.setItem(MSTORE, JSON.stringify(progress)); } catch (_) { /* storage unavailable */ } };
 const recOf = (m) => { const r = progress[m.id]; return r && typeof r === 'object' ? { best: Number(r.best) || 0, done: !!r.done } : { best: 0, done: false }; };
 
-const misPanel = $('#missions'), misList = $('#misList'), cvMis = $('#cvMis'), hud = $('#hud');
+const app = $('.app'), tabsNav = $('.tabs'), misCard = $('.p-mis'), misList = $('#misList'), cvMis = $('#cvMis'), hud = $('#hud');
+let view = 'synth';
 const curM = () => MISSIONS[mission.idx];
 const targetVisible = () => { const m = curM(); return (!m.hidden && !mission.hard) || mission.hint; };
-function ghostTargets() { return mission.engaged && targetVisible() ? curM().target : []; }
+const tolOf = (m) => (100 - m.thr) / 100 * SCALE_DB;
 const noteName = (n) => ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][n % 12] + (Math.floor(n / 12) - 1);
 
 function spectrumOf(list) {
@@ -1944,6 +1960,7 @@ function renderMissionList() {
     return `<li><button class="mitem${rec.done ? ' done' : ''}" type="button" data-i="${i}" aria-current="${i === mission.idx}"><span class="mn">${i + 1}</span><span class="mt">${m.title}<small>${sub}</small></span><span class="mc" aria-hidden="true">✓</span></button></li>`;
   }).join('');
   $('#misDone').textContent = `${done} / ${MISSIONS.length} 성공`;
+  $('#tabMis').textContent = `${done} / ${MISSIONS.length}`;
 }
 function renderMissionDetail() {
   const m = curM();
@@ -1964,15 +1981,21 @@ function renderMissionDetail() {
   $('#hudNum').textContent = `미션 ${mission.idx + 1} · 기준 ${m.thr}%`;
   $('#hudTitle').textContent = m.title;
   $('#misHard').setAttribute('aria-pressed', mission.hard);
+  const tol = +tolOf(m).toFixed(1);
+  $('#misLegend').innerHTML = `<span><i class="lg-t"></i>목표</span><span><i class="lg-s"></i>내 소리</span><span><i class="lg-ok"></i>겹침 (±${tol} dB)</span>`
+    + `<span><b class="lgk" style="color:var(--env-b)">▲▼</b>키우기 · 줄이기</span><span><b class="lgk" style="color:var(--env-b)">+</b>추가</span><span><b class="lgk" style="color:var(--danger)">✕</b>빼기</span>`;
+}
+// on phones the list is one scrolling row; keep the current mission in it
+function revealCurrentItem() {
+  const b = misList.querySelector('[aria-current="true"]');
+  if (b && misList.scrollWidth > misList.clientWidth) misList.scrollLeft += b.getBoundingClientRect().left - misList.getBoundingClientRect().left - 8;
 }
 function selectMission(i) {
   stopAudition();
   mission.idx = clamp(i, 0, MISSIONS.length - 1); mission.hint = false;
-  engage();
-  renderMissionList(); renderMissionDetail();
+  renderMissionList(); renderMissionDetail(); revealCurrentItem();
   dirty.harm = true;
 }
-function engage() { if (!mission.engaged) { mission.engaged = true; dirty.harm = true; } updateHud(); }
 
 function updateMission() {
   const m = curM(), r = scoreMission(), over = !!m.maxSines && r.count > m.maxSines;
@@ -1989,7 +2012,15 @@ function updateMission() {
     : targetVisible() ? feedbackText(r)
     : '목표 소리와 내 소리를 번갈아 들으며 비교해 보세요. 막히면 힌트를 누르세요.';
   $('#misNext').hidden = !(pass && mission.idx < MISSIONS.length - 1);
-  if (mission.engaged && !over) {
+  const show = targetVisible(), mt = $('#misMatch');
+  mt.hidden = !show;
+  if (show) {
+    const tol = tolOf(m), tgt = r.rows.filter(x => !x.extra), ok = tgt.filter(x => x.s > FLOOR_DB && Math.abs(x.t - x.s) <= tol).length;
+    const extras = r.rows.filter(x => x.extra).length, all = ok === tgt.length && !extras;
+    mt.textContent = all ? `✓ 배음 ${ok}개 모두 겹침` : `겹친 배음 ${ok} / ${tgt.length}${extras ? ` · 필요 없는 사인 ${extras}` : ''}`;
+    mt.classList.toggle('ok', all);
+  }
+  if (view === 'mission' && !over) {
     const rec = recOf(m); let changed = false;
     if (shown > rec.best) { rec.best = shown; changed = true; }
     if (pass && !rec.done) { rec.done = true; changed = true; }
@@ -1998,33 +2029,56 @@ function updateMission() {
   drawMission(r);
 }
 function drawMission(r) {
-  const { c, W, H } = setupCanvas(cvMis), show = targetVisible();
-  const L = 44, R = 12, Tp = 12, B = 22, w = W - L - R, h = H - Tp - B;
-  const ratios = r.rows.filter(x => (show && x.t > FLOOR_DB) || x.s > FLOOR_DB).map(x => x.ratio);
-  const xMax = Math.max(6, Math.ceil(Math.max(0, ...ratios) + .6));
-  const X = (q) => L + q / xMax * w, Y = (db) => Tp + (db / FLOOR_DB) * h;
+  const { c, W, H } = setupCanvas(cvMis), show = targetVisible(), tol = tolOf(curM());
+  const L = 44, R = 12, Tp = 24, B = 22, w = W - L - R, h = H - Tp - B;
+  const vis = r.rows.filter(x => (show && x.t > FLOOR_DB) || x.s > FLOOR_DB);
+  const xMax = Math.max(6, Math.ceil(Math.max(0, ...vis.map(x => x.ratio)) + .6));
+  const X = (q) => L + q / xMax * w, Y = (db) => Tp + (db / FLOOR_DB) * h, base = Y(FLOOR_DB);
   c.fillStyle = TH.screen; c.fillRect(0, 0, W, H);
   c.lineWidth = 1; c.font = `10px ${TH.mono}`;
   for (const db of [0, -10, -20, -30]) {
     c.strokeStyle = db === 0 ? TH.line2 : TH.line; hline(c, L, L + w, Y(db));
     c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText(db === 0 ? '0 dB' : minus(String(db)), L - 6, Y(db) + 3);
   }
-  c.strokeStyle = TH.line2; hline(c, L, L + w, Y(FLOOR_DB));
+  c.strokeStyle = TH.line2; hline(c, L, L + w, base);
   const step = xMax <= 12 ? 1 : 2;
   c.textAlign = 'center'; c.fillStyle = TH.dim;
   for (let k = step; k <= xMax; k += step) c.fillText(String(k), X(k), H - 6);
   c.textAlign = 'right'; c.fillText('×f', L - 6, H - 6);
-  const bw = clamp(w / xMax * .2, 4, 12);
+  // column width from the closest pair of components, so 0.5-spaced organ pipes don't collide
+  const xs = [...new Set(vis.map(x => +x.ratio.toFixed(3)))].sort((a, b) => a - b);
+  let gap = 1; for (let i = 1; i < xs.length; i++) gap = Math.min(gap, xs[i] - xs[i - 1]);
+  const tw = Math.round(clamp(w / xMax * gap * .6, 10, 30)), sw = Math.max(4, Math.round(tw * .44));
+  let all = show && vis.length > 0;
   for (const row of r.rows) {
-    const x = X(row.ratio);
-    if (show && row.t > FLOOR_DB) {
-      const y = Y(row.t);
-      c.globalAlpha = .18; c.fillStyle = TH.envB; c.fillRect(x - bw - 1, y, bw, Y(FLOOR_DB) - y); c.globalAlpha = 1;
-      c.strokeStyle = TH.envB; c.lineWidth = 1.5; c.strokeRect(x - bw - 1 + .75, y + .75, bw - 1.5, Y(FLOOR_DB) - y - .75);
+    const x = Math.round(X(row.ratio)), hasT = show && row.t > FLOOR_DB, hasS = row.s > FLOOR_DB;
+    if (!hasT && !hasS) continue;
+    const st = !show ? '' : row.extra ? 'extra' : !hasS ? 'missing' : Math.abs(row.t - row.s) <= tol ? 'ok' : row.s < row.t ? 'up' : 'down';
+    if (show && st !== 'ok') all = false;
+    const tc = st === 'ok' ? TH.good : TH.envB;
+    if (hasT) {
+      const y = Y(row.t), z1 = Y(Math.min(0, row.t + tol)), z2 = Math.min(base, Y(row.t - tol));
+      c.fillStyle = tc;
+      c.globalAlpha = .1; c.fillRect(x - tw / 2, y, tw, base - y);
+      c.globalAlpha = .26; c.fillRect(x - tw / 2, z1, tw, z2 - z1);
+      c.globalAlpha = 1; c.strokeStyle = tc; c.lineWidth = 1.5; c.strokeRect(x - tw / 2 + .75, y + .75, tw - 1.5, base - y - .75);
+      c.lineWidth = 1; hline(c, x - tw / 2 - 4, x + tw / 2 + 4, z1); hline(c, x - tw / 2 - 4, x + tw / 2 + 4, z2);
     }
-    if (row.s > FLOOR_DB) { const y = Y(row.s); c.fillStyle = TH.envA; c.fillRect(x + 1, y, bw, Y(FLOOR_DB) - y); }
+    if (hasS) {
+      const y = Y(row.s);
+      c.fillStyle = st === 'ok' ? TH.good : st === 'extra' ? TH.bad : TH.envA;
+      c.fillRect(x - sw / 2, y, sw, base - y);
+    }
+    if (st) {
+      const top = Math.min(hasT ? Y(row.t + (st === 'ok' ? 0 : tol)) : base, hasS ? Y(row.s) : base);
+      c.font = `700 ${st === 'ok' || st === 'extra' || st === 'missing' ? 13 : 10}px ${TH.body}`; c.textAlign = 'center';
+      c.fillStyle = st === 'ok' ? TH.good : st === 'extra' ? TH.bad : TH.envB;
+      c.fillText({ ok: '✓', extra: '✕', missing: '+', up: '▲', down: '▼' }[st], x, Math.max(13, top - 6));
+    }
   }
-  if (!show) { c.font = `11px ${TH.body}`; c.fillStyle = TH.dim; c.textAlign = 'right'; c.fillText('목표 스펙트럼은 숨겨져 있어요 · 힌트를 누르면 보입니다', W - 14, Tp + 14); }
+  c.font = `600 11px ${TH.body}`; c.textAlign = 'right';
+  if (!show) { c.fillStyle = TH.dim; c.font = `11px ${TH.body}`; c.fillText('목표 스펙트럼은 숨겨져 있어요 · 힌트를 누르면 보입니다', W - 14, 14); }
+  else if (all) { c.fillStyle = TH.good; c.fillText('모든 막대가 목표와 겹쳤어요', W - 14, 14); }
 }
 
 function setNow(text) { $('#misNow').textContent = text; }
@@ -2048,7 +2102,7 @@ function audition(which, delay) {
 }
 function play(kind) {
   if (!ensureAudio()) return;
-  stopAudition(); engage();
+  stopAudition();
   if (kind === 'ab') { audition('target', 0); audition('mine', 1700); }
   else audition(kind, 0);
 }
@@ -2058,15 +2112,26 @@ function resetToSine() {
   state.partials = [makePartial({ ratio: 1, level: 1 })];
   state.envs = { A: { ...SUSTAIN_ENV }, B: { ...SUSTAIN_ENV } };
   markCustom(); renderGenerators(); syncEnvUI(); save();
-  engage();
 }
-let misInView = false;
+function setView(v) {
+  if (v === view) return;
+  view = v;
+  app.dataset.view = v;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === v));
+  if (v !== 'mission') stopAudition();
+  try { history.replaceState(null, '', v === 'mission' ? '#missions' : location.pathname + location.search); } catch (_) { /* sandboxed */ }
+  if (tabsNav.getBoundingClientRect().top < 0) tabsNav.scrollIntoView();
+  markAllDirty(); updateHud();
+  if (v === 'mission') revealCurrentItem();
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setView(t.dataset.view)));
+let gaugeInView = false;
 function updateHud() {
-  const on = mission.engaged && !misInView;
+  const on = view === 'mission' && !gaugeInView;
   hud.hidden = !on;
   root.classList.toggle('hud-on', on);
 }
-new IntersectionObserver((es) => { misInView = es[es.length - 1].isIntersecting; updateHud(); }, { threshold: .08 }).observe(misPanel);
+new IntersectionObserver((es) => { gaugeInView = es[es.length - 1].isIntersecting; updateHud(); }, { threshold: .3 }).observe($('#misGauge'));
 
 misList.addEventListener('click', (e) => { const b = e.target.closest('.mitem'); if (b) selectMission(+b.dataset.i); });
 $('#misTarget').addEventListener('click', () => play('target'));
@@ -2074,13 +2139,12 @@ $('#misMine').addEventListener('click', () => play('mine'));
 $('#misAB').addEventListener('click', () => play('ab'));
 $('#hudTarget').addEventListener('click', () => play('target'));
 $('#hudMine').addEventListener('click', () => play('mine'));
-$('#misHint').addEventListener('click', () => { mission.hint = !mission.hint; engage(); renderMissionDetail(); dirty.harm = true; });
+$('#misHint').addEventListener('click', () => { mission.hint = !mission.hint; renderMissionDetail(); dirty.harm = true; });
 $('#misHard').addEventListener('click', () => { mission.hard = !mission.hard; renderMissionDetail(); dirty.harm = true; });
 $('#misReset').addEventListener('click', resetToSine);
-$('#misBuild').addEventListener('click', () => { engage(); go($('.p-gen')); });
-$('#misNext').addEventListener('click', () => selectMission(mission.idx + 1));
-$('#hudGo').addEventListener('click', () => go(misPanel));
-$('#hudClose').addEventListener('click', () => { stopAudition(); mission.engaged = false; updateHud(); dirty.harm = true; });
+$('#misBuild').addEventListener('click', () => go($('.p-gen')));
+$('#misNext').addEventListener('click', () => { selectMission(mission.idx + 1); if (misCard.getBoundingClientRect().top < 0) go(misCard); });
+$('#hudGo').addEventListener('click', () => go(misCard));
 let clearArmed = 0;
 $('#misClear').addEventListener('click', (e) => {
   const b = e.currentTarget;
@@ -2129,7 +2193,8 @@ mission.idx = Math.max(0, MISSIONS.findIndex(m => !recOf(m).done));
 renderMissionList();
 renderMissionDetail();
 requestAnimationFrame(frame);
-if (location.hash === '#fourier' || location.hash === '#missions') requestAnimationFrame(() => $(location.hash).scrollIntoView());
+if (location.hash === '#missions') setView('mission');
+else if (location.hash === '#fourier') requestAnimationFrame(() => $('#fourier').scrollIntoView());
 })();
 </script>
 </body>
